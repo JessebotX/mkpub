@@ -43,7 +43,7 @@ var (
 		Name:          "mkpub",
 		UsageSynopsis: "mkpub <command> [flags...]",
 		Description:   "mkpub transforms your Markdown-based source files into a distributable text publication.",
-		Version:       "0.11.0",
+		Version:       "0.11.1",
 	}
 	GlobalHelpExamples = []HelpExample{
 		{
