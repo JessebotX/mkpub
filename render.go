@@ -3,8 +3,10 @@ package mkpub
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"html/template"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -13,7 +15,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
+	htmlrender "github.com/yuin/goldmark/renderer/html"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -31,7 +33,7 @@ var (
 			parser.WithAutoHeadingID(),
 		),
 		goldmark.WithRendererOptions(
-			html.WithXHTML(),
+			htmlrender.WithXHTML(),
 		),
 	)
 )
@@ -229,6 +231,10 @@ func writeBookToHTML(book *Book, outputDir string, bookTemplate *template.Templa
 		return fmt.Errorf("write book '%s': %w", book.UniqueID, err)
 	}
 
+	if err := writeBookRSS(filepath.Join(outputDir, "rss.xml"), book); err != nil {
+		return fmt.Errorf("write book '%s': failed to create rss: %w", book.UniqueID, err)
+	}
+
 	return nil
 }
 
@@ -323,6 +329,85 @@ func copyFile(source, destination string) error {
 	defer out.Close()
 
 	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeBookRSS(path string, b *Book) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	unescapedBookLink, err := url.JoinPath(b.BaseURL, "index.html")
+	if err != nil {
+		return err
+	}
+	escapedBookLink := unescapedBookLink
+
+	bookTitle := html.EscapeString(b.Title)
+	bookLang := html.EscapeString(b.LanguageCode)
+
+	if _, err := f.Write([]byte(`
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<generator>mkpub -- github.com/JessebotX/mkpub</generator>
+<title>` + bookTitle + `</title>
+<link>` + escapedBookLink + `</link>
+<description>Recent content for ` + b.Title + `</description>
+<language>` + bookLang + `</language>
+<atom:link href="` + escapedBookLink + `" rel="self" type="application/rss+xml" />
+`)); err != nil {
+		return err
+	}
+
+	if !b.DateLastBuild.IsZero() {
+		lastBuild := b.DateLastBuild.Format("Mon, 02 Jan 2006 15:04:05 -0700")
+
+		if _, err := f.Write([]byte(`
+<lastBuildDate>` + lastBuild + `</lastBuildDate>`)); err != nil {
+			return err
+		}
+	}
+
+	for _, c := range b.Chapters {
+		unescapedChapterLink, err := url.JoinPath(b.BaseURL, c.UniqueID+".html")
+		if err != nil {
+			return err
+		}
+		escapedChapterLink := unescapedChapterLink
+
+		chapterTitle := html.EscapeString(c.Title)
+
+		if _, err := f.Write([]byte(`
+<item>
+<title>` + chapterTitle + `</title>
+<link>` + escapedChapterLink + `</link>
+<guid>` + escapedChapterLink + `</guid>
+<description>` + chapterTitle + ` now available @ ` + escapedChapterLink + `</description>`)); err != nil {
+			return err
+		}
+
+		if !c.DatePublished.IsZero() {
+			chapterDate := c.DatePublished.Format("Mon, 02 Jan 2006 15:04:05 -0700")
+
+			if _, err := f.Write([]byte(`
+<pubDate>` + chapterDate + `</pubDate>
+`)); err != nil {
+				return err
+			}
+		}
+
+		if _, err := f.Write([]byte(`</item>`)); err != nil {
+			return err
+		}
+
+	}
+
+	if _, err := f.Write([]byte(`</channel></rss>`)); err != nil {
 		return err
 	}
 
