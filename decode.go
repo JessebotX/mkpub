@@ -78,6 +78,35 @@ func DecodeCollection(inputDir string) (Collection, error) {
 			return collection, err
 		}
 
+		// Check for uniqueID conflicts
+		for _, existingBook := range collection.Books {
+			if book.UniqueID == existingBook.UniqueID {
+				return collection, fmt.Errorf("decode collection '%s': unique ID conflicts between '%s' and '%s'", inputDir, bookDir, existingBook.InputDirectory)
+			}
+		}
+
+		// Fill global authors list
+		for i := range book.Authors {
+			exists := false
+
+			if book.Authors[i].UniqueID == "" {
+				book.Authors[i].UniqueID = strings.ToLower(strings.ReplaceAll(book.Authors[i].Name, " ", "-"))
+			}
+
+			for _, existingAuthor := range collection.AllAuthors {
+				if book.Authors[i].UniqueID != existingAuthor.UniqueID {
+					break
+				}
+
+				exists = true
+				book.Authors[i] = existingAuthor
+			}
+
+			if !exists {
+				collection.AllAuthors = append(collection.AllAuthors, book.Authors[i])
+			}
+		}
+
 		collection.Books = append(collection.Books, book)
 	}
 
@@ -109,8 +138,12 @@ func DecodeBook(inputDir string, collection *Collection) (Book, error) {
 	// --- Check requirements ---
 
 	for i := range book.Authors {
-		if strings.TrimSpace(book.Authors[i].Name) == "" {
+		if collection == nil && book.Authors[i].Name == "" {
 			return book, fmt.Errorf("decode book '%s': missing required name for author #%d", inputDir, i)
+		}
+
+		if collection != nil && book.Authors[i].Name == "" && book.Authors[i].UniqueID == "" {
+			return book, fmt.Errorf("decode book '%s': missing required name or uniqueID for author #%d", inputDir, i)
 		}
 
 		if strings.TrimSpace(book.Authors[i].About) != "" {
