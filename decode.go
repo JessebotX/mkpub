@@ -102,6 +102,10 @@ func DecodeCollection(inputDir string) (Collection, error) {
 				book.Authors[i] = existingAuthor
 			}
 
+			if book.Authors[i].Name == "" {
+				book.Authors[i].Name = book.Authors[i].UniqueID
+			}
+
 			if !exists {
 				collection.AllAuthors = append(collection.AllAuthors, book.Authors[i])
 			}
