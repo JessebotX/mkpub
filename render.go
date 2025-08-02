@@ -91,12 +91,12 @@ func WriteCollectionToHTML(collection *Collection, outputDir, layoutsDir string)
 	}
 
 	// --- Write books ---
-	g := new(errgroup.Group)
-	for _, book := range collection.Books {
-		bookOutputDir := filepath.Join(outputDir, "books", book.UniqueID)
+	g := errgroup.Group{}
+	for i := range collection.Books {
+		bookOutputDir := filepath.Join(outputDir, "books", collection.Books[i].UniqueID)
 
 		g.Go(func() error {
-			if err := writeBookToHTML(&book, bookOutputDir, bookTemplate, chapterTemplate); err != nil {
+			if err := writeBookToHTML(&collection.Books[i], bookOutputDir, bookTemplate, chapterTemplate); err != nil {
 				return err
 			}
 
@@ -105,6 +105,50 @@ func WriteCollectionToHTML(collection *Collection, outputDir, layoutsDir string)
 	}
 	if err := g.Wait(); err != nil {
 		return err
+	}
+
+	// --- Write author pages ---
+	if len(collection.AllAuthors) == 0 {
+		return nil
+	}
+
+	authorTemplate, err := parseTemplate(filepath.Join(layoutsDir, "_author.html"), otherTemplatesPath)
+	if err != nil {
+		return fmt.Errorf("write collection: failed to parse author template: %w", err)
+	}
+
+	g = errgroup.Group{}
+	for _, author := range collection.AllAuthors {
+		g.Go(func() error {
+			if author.Content.Parsed == nil {
+				author.Content.Init()
+			}
+			var err error
+			author.Content.Parsed["html"], err = convertMarkdownToHTML(author.Content.Raw)
+			if err != nil {
+				return fmt.Errorf("author '%s': failed to convert 'About' markdown to HTML: %w", author.Name, err)
+			}
+
+			authorOutputDir := filepath.Join(outputDir, "authors", author.UniqueID)
+			if err := os.MkdirAll(authorOutputDir, 0755); err != nil {
+				return fmt.Errorf("failed to write author '%s' page: %w", author.UniqueID, err)
+			}
+
+			fAuthor, err := os.Create(filepath.Join(authorOutputDir, "index.html"))
+			if err != nil {
+				return err
+			}
+			defer fAuthor.Close()
+
+			if err := authorTemplate.ExecuteTemplate(fAuthor, "_author.html", &author); err != nil {
+				return fmt.Errorf("failed to write to author '%s' page: %w", author.UniqueID, err)
+			}
+
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("write collection: %w", err)
 	}
 
 	return nil
