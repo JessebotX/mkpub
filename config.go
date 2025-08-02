@@ -47,7 +47,7 @@ type Author struct {
 	Params  map[string]any
 	Content Content
 
-	ID           string
+	UniqueID     string
 	Name         string
 	About        string
 	EmailAddress string
@@ -66,9 +66,9 @@ type ExternalLink struct {
 }
 
 type Series struct {
-	ID     string
-	Name   string
-	Number float64
+	UniqueID string
+	Name     string
+	Number   float64
 }
 
 type Collection struct {
@@ -76,6 +76,7 @@ type Collection struct {
 	DateLastBuild  time.Time
 	InputDirectory string
 	Content        Content
+	AllAuthors     []Author
 
 	Format           string
 	Internal         Internal
