@@ -2,6 +2,7 @@ package mkpub
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -65,6 +66,7 @@ func WriteCollectionToHTML(collection *Collection, outputDir, layoutsDir string)
 		"index.html",
 		"_book.html",
 		"_chapter.html",
+		"_author.html",
 	}, []string{
 		"_template_*.html",
 	}); err != nil {
@@ -171,6 +173,7 @@ func WriteBookToHTML(book *Book, outputDir, layoutsDir string) error {
 		"index.html",
 		"_book.html",
 		"_chapter.html",
+		"_author.html",
 	}, []string{
 		"_template_*.html",
 	}); err != nil {
@@ -184,6 +187,26 @@ func writeBookToHTML(book *Book, outputDir string, bookTemplate *template.Templa
 	chaptersOutputDir := filepath.Join(outputDir, "chapters")
 	if err := os.MkdirAll(chaptersOutputDir, 0755); err != nil {
 		return fmt.Errorf("write book '%s': %w", book.UniqueID, err)
+	}
+
+	// --- Images ---
+	copyImagesDir := true
+	imagesInput := filepath.Join(book.InputDirectory, "images")
+	inputInfo, err := os.Stat(imagesInput)
+	if errors.Is(err, os.ErrNotExist) {
+		copyImagesDir = false
+	} else if err != nil {
+		return fmt.Errorf("write book '%s': images directory: %w", book.UniqueID, err)
+	}
+
+	if copyImagesDir {
+		if !inputInfo.IsDir() {
+			return fmt.Errorf("write book '%s': '%s' must be a directory", book.UniqueID, imagesInput)
+		}
+
+		if err := copyDirectory(imagesInput, filepath.Join(outputDir, "images"), nil, nil); err != nil {
+			return fmt.Errorf("write collection: failed to copy images to output: %w", err)
+		}
 	}
 
 	// --- Authors ---
