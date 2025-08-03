@@ -12,19 +12,15 @@ import (
 )
 
 type GlobalOpts struct {
-	HelpOpts             HelpOpts    `command:"help" desc:"Print help/usage information."`
-	VersionOpts          VersionOpts `command:"version" desc:"Print application version."`
-	BuildOpts            BuildOpts   `command:"build" desc:"Compile source files into distributable output formats."`
-	InitOpts             InitOpts    `command:"init" desc:"Generate directory structure."`
-	Help                 bool        `long:"help" short:"h" desc:"Print help/usage information."`
-	Version              bool        `long:"version" short:"v" desc:"Print application version."`
-	NoNonEssentialOutput bool        `long:"no-non-essential-output" short:"q" desc:"Include non-essential messages (e.g. compilation states) when printing to terminal output."`
-	PlainOutput          bool        `long:"plain" desc:"Strip terminal escape codes (e.g. colors, bold fonts, etc.) from terminal output." env:"TERM==dumb,NO_COLOR"`
+	HelpOpts             struct{}  `command:"help" desc:"Print help/usage information."`
+	VersionOpts          struct{}  `command:"version" desc:"Print application version."`
+	BuildOpts            BuildOpts `command:"build" desc:"Compile source files into distributable output formats."`
+	InitOpts             InitOpts  `command:"init" desc:"Generate directory structure."`
+	Help                 bool      `long:"help" short:"h" desc:"Print help/usage information."`
+	Version              bool      `long:"version" short:"v" desc:"Print application version."`
+	NoNonEssentialOutput bool      `long:"no-non-essential-output" short:"q" desc:"Include non-essential messages (e.g. compilation states) when printing to terminal output."`
+	PlainOutput          bool      `long:"plain" desc:"Strip terminal escape codes (e.g. colors, bold fonts, etc.) from terminal output." env:"TERM==dumb,NO_COLOR"`
 }
-
-type HelpOpts struct{}
-
-type VersionOpts struct{}
 
 type BuildOpts struct {
 	InputDirectory   string `long:"input-directory" short:"i" desc:"Path to directory containing source files."`
