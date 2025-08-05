@@ -1,210 +1,128 @@
 package mkpub
 
-import (
-	"errors"
-	"net/url"
-	"strings"
-	"time"
-)
-
 const (
-	BookStatusCompleted = "completed"
-	BookStatusInactive  = "inactive"
-	BookStatusOngoing   = "ongoing"
-	BookStatusHiatus    = "hiatus"
+	StatusCompleted = "completed"
+	StatusInactive  = "inactive"
+	StatusOngoing   = "ongoing"
+	StatusHiatus    = "hiatus"
 )
 
 var (
-	BookStatusValues = []string{
-		BookStatusCompleted,
-		BookStatusHiatus,
-		BookStatusInactive,
-		BookStatusOngoing,
+	StatusValidValues = []string{
+		StatusCompleted,
+		StatusInactive,
+		StatusInactive,
+		StatusOngoing,
 	}
-	ErrContentParsedNil            = errors.New("parsed content map uninitialized")
-	ErrContentParsedFormatNotExist = errors.New("parsed content format unrecognized")
 )
 
-type Content struct {
-	Raw    []byte
-	Parsed map[string]any
+type ExternalReference struct {
+	Name          string
+	Address       string
+	IsHyperlink   bool
+	IconImagePath string
 }
 
-func (c *Content) Init() {
-	c.Parsed = make(map[string]any, 0)
+type Profile struct {
+	UniqueID         string
+	Name             string
+	NameAlternate    []string
+	Roles            []string
+	ShortDescription string
+	About            string
+	ImagePaths       []string
+	Links            []ExternalReference
 }
 
-func (c *Content) Format(key string) (any, error) {
-	if c.Parsed == nil {
-		return "", ErrContentParsedNil
-	}
+type SeriesItem struct {
+	Name             string
+	NameAlternate    []string
+	ShortDescription string
+	About            string
+	IDs              map[string]string
+	Links            []ExternalReference
+	ImagePaths       []string
 
-	result, ok := c.Parsed[key]
-	if !ok {
-		return "", ErrContentParsedFormatNotExist
-	}
-
-	return result, nil
+	SeriesIndexID string
+	EntryNumber   float64
 }
 
-type Internal struct {
-	GenerateEPUB bool
-	GenerateRSS  bool
-}
+type SeriesIndex struct {
+	Name             string
+	NameAlternate    []string
+	ShortDescription string
+	IDs              map[string]string
+	Links            []ExternalReference
+	ImagePaths       []string
 
-func (i *Internal) Init() {
-	i.GenerateEPUB = true
-	i.GenerateRSS = true
-}
-
-type Author struct {
-	Params  map[string]any
-	Content Content
-
-	UniqueID     string
-	Name         string
-	About        string
-	EmailAddress string
-	Role         string
-	Links        []ExternalLink
-}
-
-func (a *Author) Init() {
-	a.Content.Init()
-}
-
-type ExternalLink struct {
-	Name           string
-	Address        string
-	IsAddressPlain bool
-}
-
-type Series struct {
 	UniqueID string
-	Name     string
-	Number   float64
 }
 
-type Collection struct {
-	Params         map[string]any
-	DateLastBuild  time.Time
-	InputDirectory string
-	Content        Content
-	AllAuthors     []Author
-
-	Format           string
-	Internal         Internal
-	Books            []Book
+type Index struct {
 	Title            string
-	Description      string
-	BaseURL          string
+	TitleAlternate   []string
+	ShortDescription string
 	LanguageCode     string
-	FaviconImageName string
-}
+	URL              string
+	Profiles         []Profile
+	Series           []SeriesIndex
+	FaviconImagePath string
+	Params           map[string]any
 
-func (c *Collection) InitDefaults(inputDir string) {
-	c.Internal.Init()
-
-	c.LanguageCode = "en"
-	c.DateLastBuild = time.Now()
-	c.InputDirectory = inputDir
+	InputPath        string
+	LayoutsDirectory string
 }
 
 type Book struct {
-	Params         map[string]any
-	Internal       Internal
-	Parent         *Collection
-	UniqueID       string
-	DateLastBuild  time.Time
-	Chapters       []Chapter
-	InputDirectory string
-	Content        Content
-
-	Format             string
-	DatePublishedEnd   time.Time
-	DatePublishedStart time.Time
 	Title              string
+	TitleAlternate     []string
 	Subtitle           string
 	TitleSort          string
-	Status             string
-	BaseURL            string
-	Description        string
 	LanguageCode       string
-	Series             Series
-	Authors            []Author
+	ShortDescription   string
+	About              string
+	URL                string
+	Authors            []Profile
 	AuthorsSort        string
-	Contributors       []Author
-	Mirrors            []ExternalLink
-	IDs                []string
+	Contributors       []Profile
+	Status             string
+	Links              []ExternalReference
+	Mirrors            []ExternalReference
 	Tags               []string
-	FaviconImageName   string
-	CoverImageName     string
-}
+	CoverImagePath     string
+	ImagePaths         []string
+	Copyright          string
+	License            string
+	DatePublishedStart string
+	DatePublishedEnd   string
+	IDs                map[string]string
+	Params             map[string]any
 
-func (b *Book) InitDefaults(uniqueID, inputDir string, parent *Collection) {
-	// Defaults
-	b.Internal.Init()
-	b.Content.Init()
-
-	b.DateLastBuild = time.Now()
-	b.UniqueID = uniqueID
-	b.Status = "completed"
-	b.InputDirectory = inputDir
-
-	// Inherited from parent
-	if parent != nil {
-		b.DateLastBuild = parent.DateLastBuild
-		b.Parent = parent
-		b.Internal.GenerateRSS = parent.Internal.GenerateRSS
-		b.Internal.GenerateEPUB = parent.Internal.GenerateEPUB
-
-		if strings.TrimSpace(parent.BaseURL) != "" {
-			b.BaseURL, _ = url.JoinPath(parent.BaseURL, "books", uniqueID)
-		}
-
-		if strings.TrimSpace(b.LanguageCode) == "" {
-			b.LanguageCode = parent.LanguageCode
-		}
-	}
-}
-
-type BookIndex struct {
-	Title       string
-	Path        string
-	Subchapters []BookIndex
+	CharacterEncoding string
+	UniqueID          string
 }
 
 type Chapter struct {
-	Params        map[string]any
-	Parent        *Book
-	DateLastBuild time.Time
-	Next          *Chapter
-	Previous      *Chapter
-	UniqueID      string
-	Content       Content
+	Title            string
+	TitleAlternate   []string
+	Subtitle         string
+	TitleSort        string
+	ShortDescription string
+	Content          string
+	AuthorsNote      string
+	Status           string
+	LanguageCode     string
+	Authors          []Profile
+	Contributors     []Profile
+	AuthorsSort      string
+	Links            []ExternalReference
+	Mirrors          []ExternalReference
+	DatePublished    string
+	DateModified     string
+	Copyright        string
+	License          string
+	IDs              map[string]string
+	Params           map[string]any
 
-	DatePublished time.Time
-	DateModified  time.Time
-	Title         string
-	Subtitle      string
-	Description   string
-	LanguageCode  string
-	Authors       []Author
-	Mirrors       []ExternalLink
-	Order         int
-	Draft         bool
-}
-
-func (c *Chapter) InitDefaults(uniqueID string, parent *Book) {
-	c.Content.Init()
-
-	// Required
-	c.Parent = parent
-	c.UniqueID = uniqueID
-	c.Title = uniqueID
-
-	// Inherited from parent
-	c.DateLastBuild = parent.DateLastBuild
-	c.LanguageCode = parent.LanguageCode
-	c.Authors = parent.Authors
+	UniqueID string
 }
