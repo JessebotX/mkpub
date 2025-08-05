@@ -154,6 +154,12 @@ func (b *Book) InitDefaults(uniqueID, inputDir string, parent *Collection) {
 	}
 }
 
+type BookIndex struct {
+	Title       string
+	Path        string
+	Subchapters []BookIndex
+}
+
 type Chapter struct {
 	Params        map[string]any
 	Parent        *Book
