@@ -1,6 +1,7 @@
 package mkpub
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 	"time"
@@ -13,12 +14,16 @@ const (
 	BookStatusHiatus    = "hiatus"
 )
 
-var BookStatusValues = []string{
-	BookStatusCompleted,
-	BookStatusHiatus,
-	BookStatusInactive,
-	BookStatusOngoing,
-}
+var (
+	BookStatusValues = []string{
+		BookStatusCompleted,
+		BookStatusHiatus,
+		BookStatusInactive,
+		BookStatusOngoing,
+	}
+	ErrContentParsedNil            = errors.New("parsed content map uninitialized")
+	ErrContentParsedFormatNotExist = errors.New("parsed content format unrecognized")
+)
 
 type Content struct {
 	Raw    []byte
@@ -26,11 +31,20 @@ type Content struct {
 }
 
 func (c *Content) Init() {
-	c.Parsed = make(map[string]any, 1)
+	c.Parsed = make(map[string]any, 0)
 }
 
-func (c *Content) Format(key string) any {
-	return c.Parsed[key]
+func (c *Content) Format(key string) (any, error) {
+	if c.Parsed == nil {
+		return "", ErrContentParsedNil
+	}
+
+	result, ok := c.Parsed[key]
+	if !ok {
+		return "", ErrContentParsedFormatNotExist
+	}
+
+	return result, nil
 }
 
 type Internal struct {
