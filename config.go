@@ -1,13 +1,29 @@
 package mkpub
 
 const (
+	// StatusCompleted indicates the work is fully published, even if it
+	// may receive small modifications in the future.
 	StatusCompleted = "completed"
-	StatusInactive  = "inactive"
-	StatusOngoing   = "ongoing"
-	StatusHiatus    = "hiatus"
+
+	// StatusHiatus indicates the work currently being published is
+	// temporarily not receiving any updates for an abnormal duration of
+	// time, and is planned to resume in the future.
+	StatusHiatus = "hiatus"
+
+	// StatusInactive indicates the incomplete published work is currently
+	// not being worked on and will not be receiving any updates for the
+	// foreseeable future.
+	StatusInactive = "inactive"
+
+	// StatusOngoing indicates the currently-incomplete work is still
+	// being worked on and will receive potentially major updates in a
+	// timely manner.
+	StatusOngoing = "ongoing"
 )
 
 var (
+	// StatusValidValues stores a list of possible values for the Status
+	// config field.
 	StatusValidValues = []string{
 		StatusCompleted,
 		StatusInactive,
@@ -16,6 +32,8 @@ var (
 	}
 )
 
+// ExternalReference points to an external object, such as a hyperlink
+// that directs the user to external donation pages.
 type ExternalReference struct {
 	Name          string
 	Address       string
@@ -23,6 +41,8 @@ type ExternalReference struct {
 	IconImagePath string
 }
 
+// Profile can represent an individual author or contributor, or an
+// organization such as a publisher.
 type Profile struct {
 	UniqueID         string
 	Name             string
@@ -34,6 +54,7 @@ type Profile struct {
 	Links            []ExternalReference
 }
 
+// SeriesItem describes a [Book]'s relation/entry in a series.
 type SeriesItem struct {
 	Name             string
 	NameAlternate    []string
@@ -47,6 +68,7 @@ type SeriesItem struct {
 	EntryNumber   float64
 }
 
+// SeriesIndex describes a series: a set of related books.
 type SeriesIndex struct {
 	Name             string
 	NameAlternate    []string
@@ -58,6 +80,14 @@ type SeriesIndex struct {
 	UniqueID string
 }
 
+// Generator describes output format generation settings for [Book]s.
+type Generator struct {
+	RSS  bool
+	EPUB bool
+}
+
+// Index is the main object that contains all [Book]s and
+// [SeriesIndex]es.
 type Index struct {
 	Title            string
 	TitleAlternate   []string
@@ -73,6 +103,9 @@ type Index struct {
 	LayoutsDirectory string
 }
 
+// Book is a written work that contains one or more [Chapter]s, which are
+// usually defined in a specific reading order. It may also be apart of zero or
+// more [SeriesItem]'s.
 type Book struct {
 	Title              string
 	TitleAlternate     []string
@@ -102,6 +135,7 @@ type Book struct {
 	UniqueID          string
 }
 
+// Chapter represents a division in a [Book].
 type Chapter struct {
 	Title            string
 	TitleAlternate   []string
