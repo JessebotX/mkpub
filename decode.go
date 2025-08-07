@@ -181,6 +181,28 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 		return book, fmt.Errorf("book \"%s\": unrecognized status \"%s\". Must be one of the following (case-insensitive): %v", book.UniqueID, book.Status, StatusValidValues)
 	}
 
+	// --- Parse chapters ---
+	navBody, err := os.ReadFile(filepath.Join(inputPath, BookNavConfigName))
+	if err != nil {
+		return book, fmt.Errorf("book \"%s\": failed to read %s: %w", book.UniqueID, BookNavConfigName, err)
+	}
+
+	if err := yaml.Unmarshal(navBody, &book.Chapters); err != nil {
+		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
+	}
+
+	chaptersDir := filepath.Join(inputPath, "chapters")
+	for i := range book.Chapters {
+		chapter := &book.Chapters[i]
+
+		f, err := os.ReadFile(filepath.Join(chaptersDir, chapter.FileName))
+		if err != nil {
+			return book, fmt.Errorf("book \"%s\": failed to read chapter file %s: %w", book.UniqueID, chapter.FileName, err)
+		}
+
+		chapter.Content = string(f)
+	}
+
 	return book, nil
 }
 

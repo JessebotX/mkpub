@@ -137,6 +137,7 @@ func main() {
 		decodeTimeEnd := time.Since(decodeTimeStart)
 
 		fmt.Printf("%+v\n", index)
+		fmt.Printf("%v\n", index.Books[0].Chapters)
 
 		if !Opts.NoNonEssentialOutput {
 			fmt.Printf(terminalStyle("Done decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
