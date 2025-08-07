@@ -1,0 +1,7 @@
+- title: "Chapter 1"
+  filename: "chapter-1.md"
+  subchapters:
+  - title: "Chapter 1.1"
+    filename: "chapter-1_1.md"
+- title: "Chapter 2"
+  filename: "chapter-2.md"

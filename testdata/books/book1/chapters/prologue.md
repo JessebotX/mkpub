@@ -1,15 +1,3 @@
----
-title: Prologue
-description: The beginning...
-order: -1
-published: "2025-06-25T15:14:00-07:00"
-extra:
-  - text: Hello
----
+# Prologue heading
 
-**Hello, world!** This is the prologue.
-
-## Items
-- Item
-- Another Item
-- Another Item
+**Lorem ipsum dolor sit amet, consectetur adipiscing elit**. Nam sed imperdiet odio. Cras venenatis metus sit amet ligula sodales, ac iaculis mauris posuere. Nullam at pretium lectus. Suspendisse venenatis eleifend commodo. Fusce in urna erat. Sed volutpat leo in fermentum luctus. Vivamus odio ante, vestibulum eget accumsan ultrices, tincidunt eu risus. In viverra lobortis ipsum, tempor lacinia libero vulputate pharetra. Donec semper dictum diam, et sodales neque rutrum ut. Aenean commodo arcu ac urna cursus, pharetra placerat leo pellentesque. Sed tempus velit ac faucibus blandit. Etiam auctor metus nec accumsan iaculis. Mauris nec nibh lacus. Praesent commodo pulvinar ipsum nec scelerisque. Cras diam orci, ultrices et nisl in, luctus sagittis elit.
