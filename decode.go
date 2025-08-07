@@ -49,6 +49,7 @@ type OutputBook struct {
 	Parent    *OutputIndex
 	InputPath string
 	Content   Content
+	Chapters  []OutputChapter
 }
 
 func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
@@ -72,6 +73,15 @@ func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
 	}
 
 	return nil
+}
+
+type OutputChapter struct {
+	Chapter
+
+	Book      *OutputBook
+	InputPath string
+	Content   Content
+	Chapters  []OutputChapter
 }
 
 type Content struct {
@@ -187,26 +197,48 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 		return book, fmt.Errorf("book \"%s\": failed to read %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
 
-	if err := yaml.Unmarshal(navBody, &book.Chapters); err != nil {
+	var navConfMap []any
+	if err := yaml.Unmarshal(navBody, &navConfMap); err != nil {
+		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
+	}
+
+	var chapters []OutputChapter
+	if err := mapToStruct(navConfMap, &chapters); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
 
 	chaptersDir := filepath.Join(inputPath, "chapters")
-	for i := range book.Chapters {
-		chapter := &book.Chapters[i]
-
-		f, err := os.ReadFile(filepath.Join(chaptersDir, chapter.FileName))
-		if err != nil {
-			return book, fmt.Errorf("book \"%s\": failed to read chapter file %s: %w", book.UniqueID, chapter.FileName, err)
-		}
-
-		chapter.Content = string(f)
+	if err := parseNav(&chapters, chaptersDir); err != nil {
+		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
+	book.Chapters = chapters
 
 	return book, nil
 }
 
-func mapToStruct(m map[string]any, s any) error {
+func parseNav(chapters *[]OutputChapter, chaptersDir string) error {
+	for i := range *chapters {
+		chapter := &((*chapters)[i])
+
+		f, err := os.ReadFile(filepath.Join(chaptersDir, chapter.FileName))
+		if err != nil {
+			return err
+		}
+
+		if chapter.Chapters != nil {
+			if err = parseNav(&chapter.Chapters, chaptersDir); err != nil {
+				return err
+			}
+		}
+
+		chapter.InputPath = filepath.Join(chaptersDir, chapter.FileName)
+		chapter.Content.Raw = f
+	}
+
+	return nil
+}
+
+func mapToStruct(m any, s any) error {
 	body, err := json.Marshal(m)
 	if err != nil {
 		return err

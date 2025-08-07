@@ -134,7 +134,6 @@ type Book struct {
 	DatePublishedEnd   string
 	IDs                map[string]string
 	Params             map[string]any
-	Chapters           []Chapter
 
 	CharacterEncoding string
 	UniqueID          string
@@ -147,7 +146,6 @@ type Chapter struct {
 	Subtitle         string
 	TitleSort        string
 	ShortDescription string
-	Content          string
 	FileName         string
 	AuthorsNote      string
 	LanguageCode     string
@@ -163,6 +161,6 @@ type Chapter struct {
 	IDs              map[string]string
 	Params           map[string]any
 
-	UniqueID    string
-	Subchapters []Chapter
+	UniqueID string
+	Chapters []Chapter
 }
