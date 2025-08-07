@@ -169,7 +169,17 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookConfigName, err)
 	}
 
+	// --- Further parsing ---
 	book.Params = confMap
+	book.Content.Raw = []byte(book.About)
+
+	if book.Status == "" {
+		book.Status = StatusCompleted
+	}
+
+	if ok := book.Status.Valid(); !ok {
+		return book, fmt.Errorf("book \"%s\": unrecognized status \"%s\". Must be one of the following (case-insensitive): %v", book.UniqueID, book.Status, StatusValidValues)
+	}
 
 	return book, nil
 }
