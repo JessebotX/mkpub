@@ -1,5 +1,10 @@
 package mkpub
 
+import (
+	"slices"
+	"strings"
+)
+
 type Status string
 
 const (
@@ -28,11 +33,15 @@ var (
 	// config field.
 	StatusValidValues = []Status{
 		StatusCompleted,
-		StatusInactive,
+		StatusHiatus,
 		StatusInactive,
 		StatusOngoing,
 	}
 )
+
+func (s Status) Valid() bool {
+	return slices.Contains(StatusValidValues, Status(strings.ToLower(string(s))))
+}
 
 // ExternalReference points to an external object, such as a hyperlink
 // that directs the user to external donation pages.
