@@ -1,5 +1,7 @@
 package mkpub
 
+type Status string
+
 const (
 	// StatusCompleted indicates the work is fully published, even if it
 	// may receive small modifications in the future.
@@ -24,7 +26,7 @@ const (
 var (
 	// StatusValidValues stores a list of possible values for the Status
 	// config field.
-	StatusValidValues = []string{
+	StatusValidValues = []Status{
 		StatusCompleted,
 		StatusInactive,
 		StatusInactive,
@@ -111,7 +113,7 @@ type Book struct {
 	Authors            []Profile
 	AuthorsSort        string
 	Contributors       []Profile
-	Status             string
+	Status             Status
 	Links              []ExternalReference
 	Mirrors            []ExternalReference
 	Tags               []string
@@ -137,7 +139,6 @@ type Chapter struct {
 	ShortDescription string
 	Content          string
 	AuthorsNote      string
-	Status           string
 	LanguageCode     string
 	Authors          []Profile
 	Contributors     []Profile
