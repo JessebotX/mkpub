@@ -130,11 +130,13 @@ func main() {
 		// DECODING:
 
 		decodeTimeStart := time.Now()
-		collection, err := mkpub.DecodeCollection(inputDir)
+		index, err := mkpub.DecodeIndex(inputDir)
 		if err != nil {
 			errExit(1, err.Error())
 		}
 		decodeTimeEnd := time.Since(decodeTimeStart)
+
+		fmt.Printf("%+v\n", index)
 
 		if !Opts.NoNonEssentialOutput {
 			fmt.Printf(terminalStyle("Done decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
@@ -144,9 +146,9 @@ func main() {
 
 		renderTimeStart := time.Now()
 
-		if err := mkpub.WriteCollectionToHTML(&collection, outputDir, layoutsDir); err != nil {
-			errExit(1, err.Error())
-		}
+		// if err := mkpub.WriteCollectionToHTML(&collection, outputDir, layoutsDir); err != nil {
+		// 	errExit(1, err.Error())
+		// }
 
 		renderTimeEnd := time.Since(renderTimeStart)
 

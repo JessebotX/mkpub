@@ -80,12 +80,6 @@ type SeriesIndex struct {
 	UniqueID string
 }
 
-// Generator describes output format generation settings for [Book]s.
-type Generator struct {
-	RSS  bool
-	EPUB bool
-}
-
 // Index is the main object that contains all [Book]s and
 // [SeriesIndex]es.
 type Index struct {
@@ -99,7 +93,6 @@ type Index struct {
 	FaviconImagePath string
 	Params           map[string]any
 
-	InputPath        string
 	LayoutsDirectory string
 }
 
