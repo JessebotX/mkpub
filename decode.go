@@ -19,9 +19,10 @@ const (
 )
 
 var (
+	ErrChapterBookNil                   = errors.New("chapter's book/parent does not exist")
+	ErrChapterMissingPossibleIdentifier = errors.New("one of the following values must be defined: \"fileName\", \"title\", \"uniqueID\"")
 	ErrContentParsedNil                 = errors.New("parsed content map is not initialized")
 	ErrContentFormatNotFound            = errors.New("parsed content format does not exist")
-	ErrChapterMissingPossibleIdentifier = errors.New("one of the following values must be defined: \"fileName\", \"title\", \"uniqueID\"")
 )
 
 type OutputIndex struct {
@@ -86,6 +87,24 @@ type OutputChapter struct {
 	Chapters  []OutputChapter
 	Next      *OutputChapter
 	Previous  *OutputChapter
+}
+
+func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
+	if book == nil {
+		return ErrChapterBookNil
+	}
+
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		return err
+	}
+
+	c.InputPath = absInputPath
+	c.UniqueID = filepath.Base(c.InputPath)
+	c.Title = c.UniqueID
+	c.LanguageCode = book.LanguageCode
+
+	return nil
 }
 
 type Content struct {
@@ -212,7 +231,7 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 	}
 
 	chaptersDir := filepath.Join(inputPath, "chapters")
-	flattenedChapters, err := parseNav(&chapters, chaptersDir)
+	flattenedChapters, err := parseNav(&chapters, chaptersDir, &book)
 	if err != nil {
 		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
@@ -236,11 +255,12 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 }
 
 // Returns a list of chapters in a flattened array for the purposes of pagination order.
-func parseNav(chapters *[]OutputChapter, chaptersDir string) ([]*OutputChapter, error) {
+func parseNav(chapters *[]OutputChapter, chaptersDir string, book *OutputBook) ([]*OutputChapter, error) {
 	var flattenedList []*OutputChapter
 
 	for i := range *chapters {
 		c := &((*chapters)[i])
+		c.InitDefaults(filepath.Join(chaptersDir, c.FileName), book)
 
 		if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
 			return nil, ErrChapterMissingPossibleIdentifier
@@ -273,7 +293,7 @@ func parseNav(chapters *[]OutputChapter, chaptersDir string) ([]*OutputChapter, 
 
 		var nested []*OutputChapter
 		if c.Chapters != nil {
-			l, err := parseNav(&c.Chapters, chaptersDir)
+			l, err := parseNav(&c.Chapters, chaptersDir, book)
 			if err != nil {
 				return nil, err
 			}
