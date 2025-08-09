@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 )
@@ -18,8 +19,9 @@ const (
 )
 
 var (
-	ErrContentParsedNil      = errors.New("parsed content map is not initialized")
-	ErrContentFormatNotFound = errors.New("parsed content format does not exist")
+	ErrContentParsedNil                 = errors.New("parsed content map is not initialized")
+	ErrContentFormatNotFound            = errors.New("parsed content format does not exist")
+	ErrChapterMissingPossibleIdentifier = errors.New("one of the following values must be defined: \"fileName\", \"title\", \"uniqueID\"")
 )
 
 type OutputIndex struct {
@@ -82,6 +84,8 @@ type OutputChapter struct {
 	InputPath string
 	Content   Content
 	Chapters  []OutputChapter
+	Next      *OutputChapter
+	Previous  *OutputChapter
 }
 
 type Content struct {
@@ -208,37 +212,82 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 	}
 
 	chaptersDir := filepath.Join(inputPath, "chapters")
-	if err := parseNav(&chapters, chaptersDir); err != nil {
+	flattenedChapters, err := parseNav(&chapters, chaptersDir)
+	if err != nil {
 		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
+
+	// Set next and previous values
+	for i := range flattenedChapters {
+		c := flattenedChapters[i]
+
+		if i-1 >= 0 {
+			c.Previous = flattenedChapters[i-1]
+		}
+
+		if i+1 < len(flattenedChapters) {
+			c.Next = flattenedChapters[i+1]
+		}
+	}
+
 	book.Chapters = chapters
 
 	return book, nil
 }
 
-func parseNav(chapters *[]OutputChapter, chaptersDir string) error {
-	for i := range *chapters {
-		chapter := &((*chapters)[i])
+// Returns a list of chapters in a flattened array for the purposes of pagination order.
+func parseNav(chapters *[]OutputChapter, chaptersDir string) ([]*OutputChapter, error) {
+	var flattenedList []*OutputChapter
 
-		f, err := os.ReadFile(filepath.Join(chaptersDir, chapter.FileName))
-		if err != nil {
-			return err
+	for i := range *chapters {
+		c := &((*chapters)[i])
+
+		if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
+			return nil, ErrChapterMissingPossibleIdentifier
 		}
 
-		if chapter.Chapters != nil {
-			if err = parseNav(&chapter.Chapters, chaptersDir); err != nil {
-				return err
+		// If either title or uniqueID is missing...
+		if c.Title != "" && c.UniqueID == "" {
+			c.UniqueID = c.Title
+		} else if c.Title == "" && c.UniqueID != "" {
+			c.Title = c.UniqueID
+		}
+
+		if c.FileName != "" {
+			raw, err := os.ReadFile(filepath.Join(chaptersDir, c.FileName))
+			if err != nil {
+				return nil, err
+			}
+			c.Content.Raw = raw
+			c.InputPath = filepath.Join(chaptersDir, c.FileName)
+
+			// if title or uniqueID is still missing, use fileName without the file extension
+			if c.UniqueID == "" {
+				c.UniqueID = strings.TrimSuffix(c.FileName, ".md")
+			}
+
+			if c.Title == "" {
+				c.Title = strings.TrimSuffix(c.FileName, ".md")
 			}
 		}
 
-		chapter.InputPath = filepath.Join(chaptersDir, chapter.FileName)
-		chapter.Content.Raw = f
+		var nested []*OutputChapter
+		if c.Chapters != nil {
+			l, err := parseNav(&c.Chapters, chaptersDir)
+			if err != nil {
+				return nil, err
+			}
+			nested = l
+		}
+
+		flattenedList = append(flattenedList, c)
+		flattenedList = append(flattenedList, nested...)
 	}
 
-	return nil
+	return flattenedList, nil
 }
 
-func mapToStruct(m any, s any) error {
+func mapToStruct[M map[string]any | []any](m M, s any) error {
 	body, err := json.Marshal(m)
 	if err != nil {
 		return err
