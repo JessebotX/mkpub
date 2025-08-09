@@ -20,6 +20,7 @@ const (
 var (
 	ErrContentParsedNil      = errors.New("parsed content map is not initialized")
 	ErrContentFormatNotFound = errors.New("parsed content format does not exist")
+	ErrChapterBookNil        = errors.New("chapter's book/parent does not exist")
 )
 
 type OutputIndex struct {
@@ -82,6 +83,24 @@ type OutputChapter struct {
 	InputPath string
 	Content   Content
 	Chapters  []OutputChapter
+}
+
+func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
+	if book == nil {
+		return ErrChapterBookNil
+	}
+
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		return err
+	}
+
+	c.InputPath = absInputPath
+	c.UniqueID = filepath.Base(c.InputPath)
+	c.Title = c.UniqueID
+	c.LanguageCode = book.LanguageCode
+
+	return nil
 }
 
 type Content struct {
@@ -208,7 +227,7 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 	}
 
 	chaptersDir := filepath.Join(inputPath, "chapters")
-	if err := parseNav(&chapters, chaptersDir); err != nil {
+	if err := parseNav(&chapters, chaptersDir, &book); err != nil {
 		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
 	book.Chapters = chapters
@@ -216,22 +235,22 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 	return book, nil
 }
 
-func parseNav(chapters *[]OutputChapter, chaptersDir string) error {
+func parseNav(chapters *[]OutputChapter, chaptersDir string, book *OutputBook) error {
 	for i := range *chapters {
 		chapter := &((*chapters)[i])
+		chapter.InitDefaults(filepath.Join(chaptersDir, chapter.FileName), book)
 
-		f, err := os.ReadFile(filepath.Join(chaptersDir, chapter.FileName))
+		f, err := os.ReadFile(chapter.InputPath)
 		if err != nil {
 			return err
 		}
 
 		if chapter.Chapters != nil {
-			if err = parseNav(&chapter.Chapters, chaptersDir); err != nil {
+			if err = parseNav(&chapter.Chapters, chaptersDir, book); err != nil {
 				return err
 			}
 		}
 
-		chapter.InputPath = filepath.Join(chaptersDir, chapter.FileName)
 		chapter.Content.Raw = f
 	}
 
