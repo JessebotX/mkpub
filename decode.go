@@ -105,6 +105,7 @@ func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
 	c.UniqueID = filepath.Base(c.InputPath)
 	c.Title = c.UniqueID
 	c.LanguageCode = book.LanguageCode
+	c.Book = book
 
 	return nil
 }
