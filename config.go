@@ -86,6 +86,7 @@ type SeriesIndex struct {
 	ShortDescription string
 	IDs              map[string]string
 	Links            []ExternalReference
+	FaviconImagePath string
 	ImagePaths       []string
 
 	UniqueID string

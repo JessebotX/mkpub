@@ -107,6 +107,14 @@ func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
 	return nil
 }
 
+type OutputSeries struct {
+	SeriesIndex
+
+	Parent  *OutputIndex
+	Books   []*Books
+	Content Content
+}
+
 type Content struct {
 	Raw []byte
 
