@@ -30,6 +30,7 @@ type OutputIndex struct {
 
 	InputPath string
 	Books     []OutputBook
+	Series    []OutputSeries
 }
 
 func (i *OutputIndex) InitDefaults(inputPath string) error {
@@ -111,8 +112,13 @@ type OutputSeries struct {
 	SeriesIndex
 
 	Parent  *OutputIndex
-	Books   []*Books
+	Books   []*OutputBook
 	Content Content
+}
+
+func (s *OutputSeries) InitDefaults(uniqueID string, parent *OutputIndex) {
+	s.UniqueID = uniqueID
+	s.Parent = parent
 }
 
 type Content struct {
@@ -165,6 +171,7 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 
 	index.Params = confMap
 
+	// --- Books ---
 	booksDir := filepath.Join(inputPath, "books")
 	dirs, err := os.ReadDir(booksDir)
 	if err != nil {
@@ -184,6 +191,57 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 		}
 
 		index.Books = append(index.Books, book)
+	}
+
+	// --- Series ---
+	for i := range index.Books {
+		book := &index.Books[i]
+
+		if len(book.Series) == 0 {
+			continue
+		}
+
+		for j := range book.Series {
+			series := &book.Series[j]
+
+			if series.IndexID == "" && series.Name == "" {
+				return index, fmt.Errorf("index: series %d must have either an indexID or a name", j)
+			}
+
+			if series.Name == "" {
+				series.Name = series.IndexID
+			}
+
+			if series.IndexID == "" {
+				series.IndexID = series.Name
+			}
+
+			exists := false
+			for k := range index.Series {
+				if series.IndexID == index.Series[k].UniqueID {
+					series.SeriesInfo = index.Series[k].SeriesInfo
+					index.Series[k].Books = append(index.Series[k].Books, book)
+
+					exists = true
+					break
+				}
+			}
+
+			if !exists {
+				id := series.IndexID
+				if id == "" {
+					id = series.Name
+				}
+
+				var output OutputSeries
+				output.InitDefaults(id, &index)
+				output.Content.Raw = []byte(series.About)
+				output.SeriesInfo = series.SeriesInfo
+				output.Books = append(output.Books, book)
+
+				index.Series = append(index.Series, output)
+			}
+		}
 	}
 
 	return index, nil

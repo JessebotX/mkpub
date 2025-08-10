@@ -65,8 +65,8 @@ type Profile struct {
 	Links            []ExternalReference
 }
 
-// SeriesItem describes a [Book]'s relation/entry in a series.
-type SeriesItem struct {
+// SeriesInfo describes internal information of a series
+type SeriesInfo struct {
 	Name             string
 	NameAlternate    []string
 	ShortDescription string
@@ -74,22 +74,22 @@ type SeriesItem struct {
 	IDs              map[string]string
 	Links            []ExternalReference
 	ImagePaths       []string
+}
 
-	SeriesIndexID string
-	EntryNumber   float64
+// BookSeriesItem describes a [Book]'s relation/entry in a series.
+type BookSeriesItem struct {
+	SeriesInfo
+
+	IndexID     string
+	EntryNumber float64
 }
 
 // SeriesIndex describes a series: a set of related books.
 type SeriesIndex struct {
-	Name             string
-	NameAlternate    []string
-	ShortDescription string
-	IDs              map[string]string
-	Links            []ExternalReference
-	FaviconImagePath string
-	ImagePaths       []string
+	SeriesInfo
 
-	UniqueID string
+	FaviconImagePath string
+	UniqueID         string
 }
 
 // Index is the main object that contains all [Book]s and
@@ -110,7 +110,7 @@ type Index struct {
 
 // Book is a written work that contains one or more [Chapter]s, which are
 // usually defined in a specific reading order. It may also be apart of zero or
-// more [SeriesItem]'s.
+// more [BookSeriesItem]'s.
 type Book struct {
 	Title              string
 	TitleAlternate     []string
@@ -127,6 +127,7 @@ type Book struct {
 	Links              []ExternalReference
 	Mirrors            []ExternalReference
 	Tags               []string
+	Series             []BookSeriesItem
 	CoverImagePath     string
 	ImagePaths         []string
 	Copyright          string
