@@ -31,6 +31,7 @@ type OutputIndex struct {
 	InputPath string
 	Books     []OutputBook
 	Series    []OutputSeries
+	Profiles  []OutputProfile
 }
 
 func (i *OutputIndex) InitDefaults(inputPath string) error {
@@ -119,6 +120,19 @@ type OutputSeries struct {
 func (s *OutputSeries) InitDefaults(uniqueID string, parent *OutputIndex) {
 	s.UniqueID = uniqueID
 	s.Parent = parent
+}
+
+type OutputProfile struct {
+	Profile
+
+	Parent  *OutputIndex
+	Books   []*OutputBook
+	Content Content
+}
+
+func (p *OutputProfile) InitDefaults(uniqueID string, parent *OutputIndex) {
+	p.UniqueID = uniqueID
+	p.Parent = parent
 }
 
 type Content struct {
@@ -243,6 +257,59 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 			}
 		}
 	}
+
+	// --- Authors ---
+	for i := range index.Books {
+		book := &index.Books[i]
+
+		if len(book.Authors) == 0 {
+			continue
+		}
+
+		for j := range book.Authors {
+			author := &book.Authors[j]
+
+			if author.UniqueID == "" && author.Name == "" {
+				return index, fmt.Errorf("index: author %d must have either an indexID or a name", j)
+			}
+
+			if author.Name == "" {
+				author.Name = author.UniqueID
+			}
+
+			if author.UniqueID == "" {
+				author.UniqueID = author.Name
+			}
+
+			exists := false
+			for k := range index.Profiles {
+				if author.UniqueID == index.Profiles[k].UniqueID {
+					*author = index.Profiles[k].Profile
+					index.Profiles[k].Books = append(index.Profiles[k].Books, book)
+
+					exists = true
+					break
+				}
+			}
+
+			if !exists {
+				id := author.UniqueID
+				if id == "" {
+					id = author.Name
+				}
+
+				var output OutputProfile
+				output.InitDefaults(id, &index)
+				output.Content.Raw = []byte(author.About)
+				output.Profile = *author
+				output.Books = append(output.Books, book)
+
+				index.Profiles = append(index.Profiles, output)
+			}
+		}
+	}
+
+	fmt.Printf("%+v\n\n", index.Profiles)
 
 	return index, nil
 }
