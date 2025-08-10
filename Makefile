@@ -19,3 +19,4 @@ vet:
 
 clean:
 	rm -f $(BINEXE) $(BINEXE).exe
+	rm -rf testdata/build
