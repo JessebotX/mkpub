@@ -19,8 +19,9 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 		"index.html",
 		"_book.html",
 		"_chapter.html",
-		"_author.html",
+		"_profile.html",
 		"_series.html",
+		"_tag.html",
 	}); err != nil {
 		return fmt.Errorf("write index: failed to copy files to output: %w", err)
 	}
