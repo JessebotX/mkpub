@@ -309,8 +309,6 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 		}
 	}
 
-	fmt.Printf("%+v\n\n", index.Profiles)
-
 	return index, nil
 }
 

@@ -136,8 +136,6 @@ func main() {
 		}
 		decodeTimeEnd := time.Since(decodeTimeStart)
 
-		fmt.Printf("=== DEBUG: ===\n\n%#v\n", index)
-
 		if !Opts.NoNonEssentialOutput {
 			fmt.Printf(terminalStyle("Done decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
 		}
