@@ -136,8 +136,7 @@ func main() {
 		}
 		decodeTimeEnd := time.Since(decodeTimeStart)
 
-		fmt.Printf("%+v\n", index)
-		fmt.Printf("%v\n", index.Books[0].Chapters)
+		fmt.Printf("=== DEBUG: ===\n\n%#v\n", index)
 
 		if !Opts.NoNonEssentialOutput {
 			fmt.Printf(terminalStyle("Done decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
@@ -147,9 +146,9 @@ func main() {
 
 		renderTimeStart := time.Now()
 
-		// if err := mkpub.WriteCollectionToHTML(&collection, outputDir, layoutsDir); err != nil {
-		// 	errExit(1, err.Error())
-		// }
+		if err := mkpub.WriteIndexToStaticWebsite(&index, outputDir); err != nil {
+			errExit(1, err.Error())
+		}
 
 		renderTimeEnd := time.Since(renderTimeStart)
 
