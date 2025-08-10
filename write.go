@@ -1,6 +1,7 @@
 package mkpub
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -8,6 +9,28 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	mdhtml "github.com/yuin/goldmark/renderer/html"
+)
+
+var (
+	md = goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Footnote,
+			extension.Typographer,
+		),
+		goldmark.WithParserOptions(
+			parser.WithAttribute(),
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithRendererOptions(
+			mdhtml.WithXHTML(),
+		),
+	)
 )
 
 func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
@@ -24,26 +47,55 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 		"_series.html",
 		"_tag.html",
 	}); err != nil {
-		return fmt.Errorf("write index: failed to copy files to output: %w", err)
+		return fmt.Errorf("write: failed to copy files to output: %w", err)
+	}
+
+	// --- parse content ---
+	for i := range index.Books {
+		book := &index.Books[i]
+
+		parsedHTML, err := convertMarkdownToHTML(book.Content.Raw)
+		if err != nil {
+			return fmt.Errorf("write: failed to convert book \"%s\" about field to html: %w", book.UniqueID, err)
+		}
+		book.Content.AddFormat("html", parsedHTML)
+	}
+
+	for i := range index.Series {
+		series := &index.Series[i]
+		parsedHTML, err := convertMarkdownToHTML(series.Content.Raw)
+		if err != nil {
+			return fmt.Errorf("write: failed to convert series \"%s\" (%s) about info to html: %w", series.Name, series.UniqueID, err)
+		}
+		series.Content.AddFormat("html", parsedHTML)
+	}
+
+	for i := range index.Profiles {
+		profile := &index.Profiles[i]
+		parsedHTML, err := convertMarkdownToHTML(profile.Content.Raw)
+		if err != nil {
+			return fmt.Errorf("write: failed to convert profile \"%s\" (%s) about info to html: %w", profile.Name, profile.UniqueID, err)
+		}
+		profile.Content.AddFormat("html", parsedHTML)
 	}
 
 	// --- book index ---
 	wrIndex, err := os.Create(filepath.Join(outputDir, "index.html"))
 	if err != nil {
-		return fmt.Errorf("write index: %w", err)
+		return fmt.Errorf("write: %w", err)
 	}
 	defer wrIndex.Close()
 
 	indexTmplPath := filepath.Join(index.LayoutsDirectory, "index.html")
 	indexTmpl, err := template.New("index.html").Funcs(TemplateFuncs).ParseFiles(indexTmplPath)
 	if err != nil {
-		err = fmt.Errorf("write index: failed to read index template file %s: %w", indexTmplPath, err)
+		err = fmt.Errorf("write: failed to read index template file %s: %w", indexTmplPath, err)
 		writeErrHTML(err, wrIndex)
 		return err
 	}
 
 	if err := indexTmpl.ExecuteTemplate(wrIndex, "index.html", index); err != nil {
-		err = fmt.Errorf("write index: %w", err)
+		err = fmt.Errorf("write: %w", err)
 		writeErrHTML(err, wrIndex)
 		return err
 	}
@@ -205,4 +257,13 @@ background:#333333;
 color:white;
 z-index:999"><span style="background:red;color:white;">ERROR:</span> ` + err.Error() + `</div>`))
 	}
+}
+
+func convertMarkdownToHTML(data []byte) (template.HTML, error) {
+	var buffer bytes.Buffer
+	if err := md.Convert(data, &buffer); err != nil {
+		return template.HTML(""), err
+	}
+
+	return template.HTML(buffer.String()), nil
 }
