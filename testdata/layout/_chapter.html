@@ -7,10 +7,9 @@
   {{- end }}
 </header>
 <main>
-  {{ with .Description }}
+  {{ with .ShortDescription }}
   <p>{{ . }}</p>
   {{ end }}
   <div class="content">
-  {{ .Content.Format "html" }}
   </div>
 </main>

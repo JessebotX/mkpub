@@ -6,6 +6,7 @@ authors:
     about: "John Doe is an author"
   - name: "Jane Doe"
 authorsSort: "Doe, John & Doe, Jane"
+about: "Hello, world! 😇"
 published: "2025-05-16 2:05-07:00"
 series:
   - name: The Book

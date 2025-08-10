@@ -1,5 +1,28 @@
-{{ template "_template_1.html" }}
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{- with .ShortDescription }}
+<meta name="description" content="{{ . }}">
+<meta name="og:description" content="{{ . }}">
+<meta property="og:description" content="{{ . }}">
+{{- end }}
+<meta name="type" content="website">
+<meta name="og:type" content="website">
+<meta property="og:type" content="website">
+{{- with .Title }}
+<meta name="title" content="{{ . }}">
+<meta name="og:title" content="{{ . }}">
+<meta property="og:title" content="{{ . }}">
+<title>{{ . }}</title>
+{{- end }}
 
-{{ define "main" }}
-{{ .Title }} collection
+<h1>{{ .Title }}</h1>
+
+{{ $i := 0.0 }}
+{{ range .Books }}
+{{ $i = (inc $i) }}
+{{ .Title }}
+{{ .Content.Raw }}
 {{ end }}
+
+<p>{{ $i }} books</p>
