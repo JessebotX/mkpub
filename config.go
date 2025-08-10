@@ -46,10 +46,16 @@ func (s Status) Valid() bool {
 // ExternalReference points to an external object, such as a hyperlink
 // that directs the user to external donation pages.
 type ExternalReference struct {
-	Name          string
-	Address       string
-	IsHyperlink   bool
-	IconImagePath string
+	Name        string
+	Address     string
+	IsHyperlink bool
+}
+
+// MediaAsset refers to videos and images included within a [Book]
+type MediaAsset struct {
+	Path          string
+	AlternateText string
+	Caption       string
 }
 
 // Profile can represent an individual author or contributor, or an
@@ -61,7 +67,7 @@ type Profile struct {
 	Roles            []string
 	ShortDescription string
 	About            string
-	ImagePaths       []string
+	Images           []MediaAsset
 	Links            []ExternalReference
 }
 
@@ -73,7 +79,7 @@ type SeriesInfo struct {
 	About            string
 	IDs              map[string]string
 	Links            []ExternalReference
-	ImagePaths       []string
+	Images           []MediaAsset
 }
 
 // BookSeriesItem describes a [Book]'s relation/entry in a series.
@@ -128,8 +134,8 @@ type Book struct {
 	Mirrors            []ExternalReference
 	Tags               []string
 	Series             []BookSeriesItem
-	CoverImagePath     string
-	ImagePaths         []string
+	CoverImage         MediaAsset
+	Images             []MediaAsset
 	Copyright          string
 	License            string
 	DatePublishedStart string
