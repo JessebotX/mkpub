@@ -25,3 +25,6 @@ clean-bin:
 
 clean-test:
 	rm -rf testdata/build
+
+install:
+	$(GOEXE) install ./cmd/mkpub
