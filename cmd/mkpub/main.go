@@ -5,182 +5,137 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/alecthomas/kong"
 
 	"github.com/JessebotX/mkpub"
 )
 
-type GlobalOpts struct {
-	HelpOpts             struct{}  `command:"help" desc:"Print help/usage information."`
-	VersionOpts          struct{}  `command:"version" desc:"Print application version."`
-	BuildOpts            BuildOpts `command:"build" desc:"Compile source files into distributable output formats."`
-	InitOpts             InitOpts  `command:"init" desc:"Generate directory structure."`
-	Help                 bool      `long:"help" short:"h" desc:"Print help/usage information."`
-	Version              bool      `long:"version" short:"v" desc:"Print application version."`
-	NoNonEssentialOutput bool      `long:"no-non-essential-output" short:"q" desc:"Include non-essential messages (e.g. compilation states) when printing to terminal output."`
-	PlainOutput          bool      `long:"plain" desc:"Strip terminal escape codes (e.g. colors, bold fonts, etc.) from terminal output." env:"TERM==dumb,NO_COLOR"`
-}
-
-type BuildOpts struct {
-	InputDirectory   string `long:"input-directory" short:"i" desc:"Path to directory containing source files."`
-	OutputDirectory  string `long:"output-directory" short:"o" desc:"Path to directory containing compiled output files/formats for distribution."`
-	LayoutsDirectory string `long:"layouts-directory" desc:"Path to directory containing files that lay out output formats."`
-	Minify           bool   `long:"minify" desc:"Minify output of supported file formats."`
-}
-
-type InitOpts struct {
-	DryRun bool `long:"dry-run" desc:"Show changes that will happen without actually performing the actions."`
-}
-
-var (
-	Opts    GlobalOpts
-	Program = ProgramInfo{
-		Name:          "mkpub",
-		UsageSynopsis: "mkpub <command> [flags...]",
-		Description:   "mkpub transforms your Markdown-based source files into a distributable text publication.",
-		Version:       "0.11.1",
-	}
-	GlobalHelpExamples = []HelpExample{
-		{
-			Usage:       Program.Name + " init",
-			Description: "Initialize default project structure for source files.",
-		},
-		{
-			Usage:       Program.Name,
-			Description: "Convert sources in current directory into distributable output formats. Shorthand for 'build' command.",
-		},
-		{
-			Usage:       Program.Name + " build --minify",
-			Description: "Convert sources in current directory to *minified* distributable output formats (minification support depends on format).",
-		},
-		{
-			Usage:       Program.Name + " build -i /path/to/source/dir -o /path/to/output/dir",
-			Description: "Convert sources found in /path/to/source/dir into distributable output formats generated at /path/to/output/dir.",
-		},
-		{
-			Usage:       Program.Name + " help build",
-			Description: "Print help/usage information for subcommand 'build'.",
-		},
-	}
+const (
+	Version = "0.12.0"
 )
 
-func main() {
-	command, posArgs, err := OptsParse(&Opts, os.Args)
-	if err != nil {
-		errExit(1, err.Error())
-	}
+var (
+	cli CLI
+)
 
-	if command == "help" || Opts.Help {
-		if len(posArgs) == 1 {
-			if err := OptsWriteHelp(os.Stderr, &Opts, Program.Name, posArgs[0], GlobalHelpExamples...); err != nil {
-				errExit(1, err.Error())
-			}
-		} else {
-			OptsWriteHelp(os.Stderr, &Opts, Program.Name, "", GlobalHelpExamples...)
-		}
-		os.Exit(0)
-	} else if command == "version" || Opts.Version {
-		if len(posArgs) > 0 {
-			errExit(1, "command 'version' does not accept any arguments.")
-		}
-
-		fmt.Printf("%s v%s\n", Program.Name, Program.Version)
-
-		os.Exit(0)
-	} else if command == "build" {
-		if len(posArgs) > 0 {
-			argsList := strings.Join(posArgs, ", ")
-
-			errExit(1, "unrecognized flags/arguments: %v", argsList)
-		}
-
-		inputDir := Opts.BuildOpts.InputDirectory
-		outputDir := Opts.BuildOpts.OutputDirectory
-		layoutsDir := Opts.BuildOpts.LayoutsDirectory
-
-		// --- Set defaults ---
-		if inputDir == "" {
-			inputDir = "./"
-		}
-
-		if outputDir == "" {
-			outputDir = filepath.Join(inputDir, "build")
-		}
-
-		if layoutsDir == "" {
-			layoutsDir = filepath.Join(inputDir, "layouts")
-		}
-
-		// --- Begin build ---
-		buildTimeStart := time.Now()
-		if !Opts.NoNonEssentialOutput {
-			minificationStatus := strconv.FormatBool(Opts.BuildOpts.Minify)
-			if !Opts.BuildOpts.Minify {
-				minificationStatus += " ('--minify' to enable)"
-			}
-
-			fmt.Println(terminalStyle("Building...", TerminalTextBold, TerminalTextGreen))
-			fmt.Printf("+ Input directory:     %s\n", inputDir)
-			fmt.Printf("+ Output directory:    %s\n", outputDir)
-			fmt.Printf("+ Layouts directory:   %s\n", layoutsDir)
-			fmt.Printf("+ Output minification: %s\n", minificationStatus)
-		}
-
-		// DECODING:
-
-		decodeTimeStart := time.Now()
-		index, err := mkpub.DecodeIndex(inputDir)
-		if err != nil {
-			errExit(1, err.Error())
-		}
-		decodeTimeEnd := time.Since(decodeTimeStart)
-
-		if !Opts.NoNonEssentialOutput {
-			fmt.Printf(terminalStyle("Done decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
-		}
-
-		// RENDERING:
-
-		renderTimeStart := time.Now()
-
-		if err := mkpub.WriteIndexToStaticWebsite(&index, outputDir); err != nil {
-			errExit(1, err.Error())
-		}
-
-		renderTimeEnd := time.Since(renderTimeStart)
-
-		if !Opts.NoNonEssentialOutput {
-			fmt.Printf(terminalStyle("Done rendering!", TerminalTextGreen)+" (%v)\n", renderTimeEnd)
-		}
-
-		// --- End build ---
-		buildTimeEnd := time.Since(buildTimeStart)
-		if !Opts.NoNonEssentialOutput {
-			fmt.Printf(terminalStyle("Done building!", TerminalTextBold, TerminalTextGreen)+" (%v)\n", buildTimeEnd)
-		}
-	} else {
-		if len(posArgs) == 0 {
-			errExit(1, "command/argument not found.")
-		}
-
-		errExit(1, "command/argument not recognized.")
-	}
+type Context struct {
+	NoNonEssentialMessages bool
+	Plain                  bool
 }
 
-func errExit(exitCode int, format string, a ...any) {
-	fmt.Fprintf(
-		os.Stderr,
-		terminalStyle(Program.Name+" error: ", TerminalTextBold, TerminalTextRed)+format+"\n",
-		a...,
-	)
-	os.Exit(exitCode)
+type BuildCommand struct {
+	InputDirectory  string `short:"i" help:"Path to directory containing source files." type:"path" default:"./"`
+	OutputDirectory string `short:"o" help:"Path to directory containing compiled output files/formats for distribution." type:"path"`
+	Minify          bool   `help:"Str output of supported file formats."`
+}
+
+func (b *BuildCommand) Run(context *Context) error {
+	if b.OutputDirectory == "" {
+		b.OutputDirectory = filepath.Join(b.InputDirectory, "build")
+	}
+
+	// --- Begin build ---
+	buildTimeStart := time.Now()
+
+	if !context.NoNonEssentialMessages {
+		minificationStatus := strconv.FormatBool(b.Minify)
+		if !b.Minify {
+			minificationStatus += " (\"--minify\" to enable) TODO: minification not implemented yet"
+		}
+
+		fmt.Println(terminalStyle("Building...", TerminalTextBold, TerminalTextGreen))
+		fmt.Printf("+ Input directory:     %s\n", b.InputDirectory)
+		fmt.Printf("+ Output directory:    %s\n", b.OutputDirectory)
+		fmt.Printf("+ Output minification: %s\n", minificationStatus)
+	}
+
+	// --- Decoding ---
+
+	decodeTimeStart := time.Now()
+	if !context.NoNonEssentialMessages {
+		fmt.Println(terminalStyle("Start decoding...", TerminalTextBold))
+	}
+
+	index, err := mkpub.DecodeIndex(b.InputDirectory)
+	if err != nil {
+		return err
+	}
+
+	decodeTimeEnd := time.Since(decodeTimeStart)
+	if !context.NoNonEssentialMessages {
+		fmt.Printf(terminalStyle("Finished decoding!", TerminalTextGreen)+" (%v)\n", decodeTimeEnd)
+	}
+
+	// --- Generating ---
+
+	generateTimeStart := time.Now()
+	if !context.NoNonEssentialMessages {
+		fmt.Println(terminalStyle("Start generating...", TerminalTextBold))
+	}
+
+	if err := mkpub.WriteIndexToStaticWebsite(&index, b.OutputDirectory); err != nil {
+		return err
+	}
+
+	generateTimeEnd := time.Since(generateTimeStart)
+	if !context.NoNonEssentialMessages {
+		fmt.Printf(terminalStyle("Finished generating!", TerminalTextGreen)+" (%v)\n", generateTimeEnd)
+	}
+
+	// --- End build ---
+	buildTimeEnd := time.Since(buildTimeStart)
+	if !context.NoNonEssentialMessages {
+		fmt.Printf(terminalStyle("Finished building!", TerminalTextBold, TerminalTextGreen)+" (%v)\n", buildTimeEnd)
+	}
+
+	return nil
+}
+
+type VersionCommand struct{}
+
+func (v *VersionCommand) Run() error {
+	handleVersionFlag(true)
+
+	return nil
+}
+
+type CLI struct {
+	Build                  BuildCommand   `cmd:"" help:"Convert source files into a static website and other distributable output formats"`
+	Version                VersionCommand `cmd:"" help:"Print application version to the terminal (i.e. standard output) and exit successfully (code 0)"`
+	NoNonEssentialMessages bool           `short:"q" help:"Disable printing non-error debug messages (e.g. build progress messages) to the terminal (i.e. standard output)"`
+	Plain                  bool           `env:"NO_COLOR" help:"Disable printing colored/styled debug text (i.e. terminal escape codes) to the terminal (i.e. standard output)"`
+}
+
+func handleVersionFlag(versionFlag bool) {
+	if !versionFlag {
+		return
+	}
+
+	if len(os.Args) == 0 {
+		fmt.Fprintf(os.Stderr, "mkpub error: missing command name")
+		os.Exit(1)
+	}
+
+	fmt.Printf("%s version %s\n", os.Args[0], Version)
+	os.Exit(0)
 }
 
 func terminalStyle(s string, codes ...string) string {
-	if Opts.PlainOutput {
+	if cli.Plain {
 		return s
 	}
 
 	return TerminalStyle(s, codes...)
+}
+
+func main() {
+	context := kong.Parse(&cli)
+	if err := context.Run(&Context{
+		Plain:                  cli.Plain,
+		NoNonEssentialMessages: cli.NoNonEssentialMessages,
+	}); err != nil {
+		context.FatalIfErrorf(err)
+	}
 }
