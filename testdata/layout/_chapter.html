@@ -1,15 +1,16 @@
 <header>
-  <h1>
-    {{ .Title }}
-  </h1>
-  {{ with .Subtitle -}}
-  <p>{{ . }}</p>
-  {{- end }}
+	<h1>
+		{{ .Title }}
+	</h1>
+	{{ with .Subtitle -}}
+	<p>{{ . }}</p>
+	{{- end }}
 </header>
 <main>
-  {{ with .ShortDescription }}
-  <p>{{ . }}</p>
-  {{ end }}
-  <div class="content">
-  </div>
+	{{ with .ShortDescription }}
+	<p>{{ . }}</p>
+	{{ end }}
+	<div class="content">
+		{{ .Content.Format "html" }}
+	</div>
 </main>
