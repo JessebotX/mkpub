@@ -115,6 +115,7 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 		bookOutputDir := filepath.Join(outputDir, "books", book.UniqueID)
 
 		if err := writeBookToStaticWebsite(book, bookOutputDir); err != nil {
+			writeErrHTML(err, wrIndex)
 			return err
 		}
 	}
@@ -129,7 +130,7 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 
 	wrBook, err := os.Create(filepath.Join(outputDir, "index.html"))
 	if err != nil {
-		return fmt.Errorf("write \"%s\": %w", book.UniqueID, err)
+		return fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
 	}
 	defer wrBook.Close()
 
@@ -137,13 +138,13 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 	bookTmplPath := filepath.Join(index.LayoutsDirectory, "_book.html")
 	bookTmpl, err := template.New("_book.html").Funcs(TemplateFuncs).ParseFiles(bookTmplPath)
 	if err != nil {
-		err = fmt.Errorf("write \"%s\": failed to read template file %s: %w", book.UniqueID, bookTmplPath, err)
+		err = fmt.Errorf("book \"%s\" (%s): failed to read template file %s: %w", book.Title, book.UniqueID, bookTmplPath, err)
 		writeErrHTML(err, wrBook)
 		return err
 	}
 
 	if err := bookTmpl.ExecuteTemplate(wrBook, "_book.html", book); err != nil {
-		err = fmt.Errorf("write \"%s\": %w", book.UniqueID, err)
+		err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
 		writeErrHTML(err, wrBook)
 		return err
 	}
@@ -153,10 +154,14 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 		chapter := flattenedChapters[i]
 		chapterOutputDir := filepath.Join(outputDir, "chapters")
 		if err := os.MkdirAll(chapterOutputDir, 0755); err != nil {
+			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
+			writeErrHTML(err, wrBook)
 			return err
 		}
 
 		if err := writeChapterToStaticWebsite(chapter, filepath.Join(chapterOutputDir, chapter.UniqueID+".html")); err != nil {
+			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
+			writeErrHTML(err, wrBook)
 			return err
 		}
 	}
@@ -175,13 +180,13 @@ func writeChapterToStaticWebsite(chapter *OutputChapter, outputPath string) erro
 	chapterTmplPath := filepath.Join(layoutsDir, "_chapter.html")
 	chapterTmpl, err := template.New("_chapter.html").Funcs(TemplateFuncs).ParseFiles(chapterTmplPath)
 	if err != nil {
-		err = fmt.Errorf("write \"%s\" chapter \"%s\": failed to read template file %s: %w", book.UniqueID, chapter.UniqueID, chapterTmplPath, err)
+		err = fmt.Errorf("chapter \"%s\": failed to read template file %s: %w", chapter.UniqueID, chapterTmplPath, err)
 		writeErrHTML(err, f)
 		return err
 	}
 
 	if err := chapterTmpl.ExecuteTemplate(f, "_chapter.html", chapter); err != nil {
-		err = fmt.Errorf("write \"%s\" chapter \"%s\": %w", book.UniqueID, chapter.UniqueID, err)
+		err = fmt.Errorf("chapter \"%s\": %w", chapter.UniqueID, err)
 		writeErrHTML(err, f)
 		return err
 	}
