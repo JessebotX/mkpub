@@ -89,6 +89,14 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 		profile.Content.AddFormat("html", parsedHTML)
 	}
 
+	// --- favicon ---
+	faviconName := index.FaviconImageName
+	if faviconName != "" {
+		if err := copyFile(filepath.Join(index.InputPath, faviconName), filepath.Join(outputDir, faviconName)); err != nil {
+			return err
+		}
+	}
+
 	// --- book index ---
 	wrIndex, err := os.Create(filepath.Join(outputDir, "index.html"))
 	if err != nil {
@@ -134,6 +142,8 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 	}
 	defer wrBook.Close()
 
+	// --- Book main page ---
+
 	index := book.Parent
 	bookTmplPath := filepath.Join(index.LayoutsDirectory, "_book.html")
 	bookTmpl, err := template.New("_book.html").Funcs(TemplateFuncs).ParseFiles(bookTmplPath)
@@ -148,6 +158,25 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 		writeErrHTML(err, wrBook)
 		return err
 	}
+
+	// --- Cover image ---
+	imagesOutputDir := filepath.Join(outputDir, "images")
+	if err := os.MkdirAll(imagesOutputDir, 0755); err != nil {
+		err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
+		writeErrHTML(err, wrBook)
+		return err
+	}
+
+	coverName := book.CoverImage.Name
+	if coverName != "" {
+		if err := copyFile(filepath.Join(book.InputPath, "images", coverName), filepath.Join(imagesOutputDir, coverName)); err != nil {
+			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
+			writeErrHTML(err, wrBook)
+			return err
+		}
+	}
+
+	// --- Chapters ---
 
 	flattenedChapters := book.ChaptersFlattened()
 	for i := range flattenedChapters {

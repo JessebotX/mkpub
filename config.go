@@ -53,7 +53,7 @@ type ExternalReference struct {
 
 // MediaAsset refers to assets such as images and videos that are included within a [Book]
 type MediaAsset struct {
-	Path          string
+	Name          string
 	AlternateText string
 	Caption       string
 }
@@ -94,8 +94,7 @@ type BookSeriesItem struct {
 type SeriesIndex struct {
 	SeriesInfo
 
-	FaviconImagePath string
-	UniqueID         string
+	UniqueID string
 }
 
 // Index is the main object that contains all [Book]s and
@@ -108,7 +107,7 @@ type Index struct {
 	URL              string
 	Profiles         []Profile
 	Series           []SeriesIndex
-	FaviconImagePath string
+	FaviconImageName string
 	Params           map[string]any
 
 	LayoutsDirectory string
