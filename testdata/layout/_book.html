@@ -1,7 +1,25 @@
 <h1>{{ .Title }}</h1>
 
+<nav>
+	<ul>
+		{{ range .Chapters }}
+		<li>
+			{{ .Title }}
+
+			{{ if (gt (len .Chapters) 0) }}
+			<ul>
+				{{ range .ChaptersFlattened }}
+				<li>{{ .Title }}</li>
+				{{ end }}
+			</ul>
+			{{ end }}
+		</li>
+		{{ end }}
+	</ul>
+</nav>
+
 <div class="content">
 
-{{ .Content.Format "html" }}
+	{{ .Content.Format "html" }}
 
 </div>
