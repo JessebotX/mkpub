@@ -59,6 +59,16 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 			return fmt.Errorf("write: failed to convert book \"%s\" about field to html: %w", book.UniqueID, err)
 		}
 		book.Content.AddFormat("html", parsedHTML)
+
+		for j := range book.ChaptersFlattened() {
+			chapter := book.ChaptersFlattened()[j]
+
+			parsedHTML, err := convertMarkdownToHTML(chapter.Content.Raw)
+			if err != nil {
+				return fmt.Errorf("write: failed to convert chapter \"%s\" content to html: %w", chapter.UniqueID, err)
+			}
+			chapter.Content.AddFormat("html", parsedHTML)
+		}
 	}
 
 	for i := range index.Series {
@@ -138,8 +148,9 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 		return err
 	}
 
-	for i := range book.Chapters {
-		chapter := &book.Chapters[i]
+	flattenedChapters := book.ChaptersFlattened()
+	for i := range flattenedChapters {
+		chapter := flattenedChapters[i]
 		chapterOutputDir := filepath.Join(outputDir, "chapters")
 		if err := os.MkdirAll(chapterOutputDir, 0755); err != nil {
 			return err

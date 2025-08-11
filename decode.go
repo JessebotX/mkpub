@@ -80,6 +80,24 @@ func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
 	return nil
 }
 
+func (b *OutputBook) ChaptersFlattened() []*OutputChapter {
+	var flattened []*OutputChapter
+
+	for i := range b.Chapters {
+		c := &b.Chapters[i]
+
+		var nested []*OutputChapter
+		if len(c.Chapters) > 0 {
+			nested = c.ChaptersFlattened()
+		}
+
+		flattened = append(flattened, c)
+		flattened = append(flattened, nested...)
+	}
+
+	return flattened
+}
+
 type OutputChapter struct {
 	Chapter
 
@@ -102,12 +120,30 @@ func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
 	}
 
 	c.InputPath = absInputPath
-	c.UniqueID = filepath.Base(c.InputPath)
+	c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
 	c.Title = c.UniqueID
 	c.LanguageCode = book.LanguageCode
 	c.Book = book
 
 	return nil
+}
+
+func (c *OutputChapter) ChaptersFlattened() []*OutputChapter {
+	var flattened []*OutputChapter
+
+	for i := range c.Chapters {
+		next := &c.Chapters[i]
+
+		var nested []*OutputChapter
+		if len(next.Chapters) > 0 {
+			nested = next.ChaptersFlattened()
+		}
+
+		flattened = append(flattened, next)
+		flattened = append(flattened, nested...)
+	}
+
+	return flattened
 }
 
 type OutputSeries struct {

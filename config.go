@@ -51,7 +51,7 @@ type ExternalReference struct {
 	IsHyperlink bool
 }
 
-// MediaAsset refers to videos and images included within a [Book]
+// MediaAsset refers to assets such as images and videos that are included within a [Book]
 type MediaAsset struct {
 	Path          string
 	AlternateText string
