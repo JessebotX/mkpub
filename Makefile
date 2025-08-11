@@ -8,6 +8,7 @@ BINEXE = mkpub
 all: build
 
 build:
+	$(GOEXE) mod download
 	$(GOEXE) build ./$(BINSRCDIR)/$(BINEXE)
 
 fmt:
@@ -17,6 +18,10 @@ fmt:
 vet:
 	$(GOVETEXE) ./...
 
-clean:
+clean: clean-bin clean-test
+
+clean-bin:
 	rm -f $(BINEXE) $(BINEXE).exe
+
+clean-test:
 	rm -rf testdata/build
