@@ -18,11 +18,8 @@
 
 <h1>{{ .Title }}</h1>
 
-{{ $i := 0.0 }}
-{{ range .Books }}
-{{ $i = (inc $i) }}
-{{ .Title }}
-{{ .Content.Raw }}
-{{ end }}
-
-<p>{{ $i }} books</p>
+<ul>
+	{{ range .Books }}
+	<li>{{ .Title }}</li>
+	{{ end }}
+</ul>
