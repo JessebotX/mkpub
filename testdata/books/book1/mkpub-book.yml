@@ -10,4 +10,5 @@ about: "**Hello, _world_!** 😇"
 published: "2025-05-16 2:05-07:00"
 series:
   - name: The Book
-coverImageName: ./cover-test.webp
+coverImage:
+  name: cover-test.webp
