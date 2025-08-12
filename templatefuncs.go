@@ -11,12 +11,13 @@ var (
 )
 
 var TemplateFuncs = template.FuncMap{
-	"add": add,
-	"sub": sub,
-	"mul": mul,
-	"div": div,
-	"inc": inc,
-	"dec": dec,
+	"add":   add,
+	"sub":   sub,
+	"mul":   mul,
+	"div":   div,
+	"inc":   inc,
+	"dec":   dec,
+	"float": convFloat,
 }
 
 func convFloat(num any) (float64, error) {
