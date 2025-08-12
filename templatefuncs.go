@@ -3,7 +3,7 @@ package mkpub
 import (
 	"errors"
 	"html/template"
-	"strconv"
+	// "strconv"
 )
 
 var (
@@ -11,26 +11,27 @@ var (
 )
 
 var TemplateFuncs = template.FuncMap{
-	"add": add,
-	"sub": sub,
-	"mul": mul,
-	"div": div,
-	"inc": inc,
-	"dec": dec,
+	"add":   add,
+	"sub":   sub,
+	"mul":   mul,
+	"div":   div,
+	"inc":   inc,
+	"dec":   dec,
+	"float": convFloat,
 }
 
 func convFloat(num any) (float64, error) {
-	numStr, ok := num.(string)
-	if !ok {
-		return -1, ErrNotFloat
+	f, ok := num.(float64)
+	if ok {
+		return f, nil
 	}
 
-	n, err := strconv.ParseFloat(numStr, 64)
-	if err != nil {
-		return -1, ErrNotFloat
+	i, ok := num.(int)
+	if ok {
+		return float64(i), nil
 	}
 
-	return n, nil
+	return -1, ErrNotFloat
 }
 
 func add(nums ...any) (float64, error) {
