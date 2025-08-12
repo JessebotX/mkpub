@@ -70,8 +70,8 @@ type Profile struct {
 	Images           []MediaAsset
 	Links            []ExternalReference
 
-	Parent  *OutputIndex
-	Books   []*OutputBook
+	Parent  *Index
+	Books   []*Book
 	Content Content
 }
 
@@ -99,8 +99,8 @@ type SeriesIndex struct {
 	SeriesInfo
 
 	UniqueID string
-	Parent   *OutputIndex
-	Books    []*OutputBook
+	Parent   *Index
+	Books    []*Book
 	Content  Content
 }
 
@@ -117,9 +117,9 @@ type Index struct {
 
 	LayoutsDirectory string
 	InputPath        string
-	Books            []OutputBook
-	Series           []OutputSeries
-	Profiles         []OutputProfile
+	Books            []Book
+	Series           []SeriesIndex
+	Profiles         []Profile
 }
 
 // Book is a written work that contains one or more [Chapter]s, which are
@@ -154,10 +154,10 @@ type Book struct {
 	CharacterEncoding string
 	UniqueID          string
 
-	Parent    *OutputIndex
+	Parent    *Index
 	InputPath string
 	Content   Content
-	Chapters  []OutputChapter
+	Chapters  []Chapter
 }
 
 // Chapter represents a division in a [Book].
@@ -182,13 +182,11 @@ type Chapter struct {
 	IDs              map[string]string
 	Params           map[string]any
 
-	UniqueID string
-	// Chapters []Chapter
-
-	Book      *OutputBook
+	UniqueID  string
+	Book      *Book
 	InputPath string
 	Content   Content
-	Chapters  []OutputChapter
-	Next      *OutputChapter
-	Previous  *OutputChapter
+	Chapters  []Chapter
+	Next      *Chapter
+	Previous  *Chapter
 }

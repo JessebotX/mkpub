@@ -33,7 +33,7 @@ var (
 	)
 )
 
-func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
+func WriteIndexToStaticWebsite(index *Index, outputDir string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func WriteIndexToStaticWebsite(index *OutputIndex, outputDir string) error {
 	return nil
 }
 
-func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
+func writeBookToStaticWebsite(book *Book, outputDir string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func writeBookToStaticWebsite(book *OutputBook, outputDir string) error {
 	return nil
 }
 
-func writeChapterToStaticWebsite(chapter *OutputChapter, outputPath string) error {
+func writeChapterToStaticWebsite(chapter *Chapter, outputPath string) error {
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return err

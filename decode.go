@@ -25,11 +25,7 @@ var (
 	ErrContentFormatNotFound            = errors.New("parsed content format does not exist")
 )
 
-type OutputIndex struct {
-	Index
-}
-
-func (i *OutputIndex) InitDefaults(inputPath string) error {
+func (i *Index) InitDefaults(inputPath string) error {
 	i.InputPath = inputPath
 
 	absInputPath, err := filepath.Abs(inputPath)
@@ -43,11 +39,7 @@ func (i *OutputIndex) InitDefaults(inputPath string) error {
 	return nil
 }
 
-type OutputBook struct {
-	Book
-}
-
-func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
+func (b *Book) InitDefaults(inputPath string, parent *Index) error {
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err
@@ -70,13 +62,13 @@ func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
 	return nil
 }
 
-func (b *OutputBook) ChaptersFlattened() []*OutputChapter {
-	var flattened []*OutputChapter
+func (b *Book) ChaptersFlattened() []*Chapter {
+	var flattened []*Chapter
 
 	for i := range b.Chapters {
 		c := &b.Chapters[i]
 
-		var nested []*OutputChapter
+		var nested []*Chapter
 		if len(c.Chapters) > 0 {
 			nested = c.ChaptersFlattened()
 		}
@@ -88,11 +80,7 @@ func (b *OutputBook) ChaptersFlattened() []*OutputChapter {
 	return flattened
 }
 
-type OutputChapter struct {
-	Chapter
-}
-
-func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
+func (c *Chapter) InitDefaults(inputPath string, book *Book) error {
 	if book == nil {
 		return ErrChapterBookNil
 	}
@@ -111,13 +99,13 @@ func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
 	return nil
 }
 
-func (c *OutputChapter) ChaptersFlattened() []*OutputChapter {
-	var flattened []*OutputChapter
+func (c *Chapter) ChaptersFlattened() []*Chapter {
+	var flattened []*Chapter
 
 	for i := range c.Chapters {
 		next := &c.Chapters[i]
 
-		var nested []*OutputChapter
+		var nested []*Chapter
 		if len(next.Chapters) > 0 {
 			nested = next.ChaptersFlattened()
 		}
@@ -129,20 +117,12 @@ func (c *OutputChapter) ChaptersFlattened() []*OutputChapter {
 	return flattened
 }
 
-type OutputSeries struct {
-	SeriesIndex
-}
-
-func (s *OutputSeries) InitDefaults(uniqueID string, parent *OutputIndex) {
+func (s *SeriesIndex) InitDefaults(uniqueID string, parent *Index) {
 	s.UniqueID = uniqueID
 	s.Parent = parent
 }
 
-type OutputProfile struct {
-	Profile
-}
-
-func (p *OutputProfile) InitDefaults(uniqueID string, parent *OutputIndex) {
+func (p *Profile) InitDefaults(uniqueID string, parent *Index) {
 	p.UniqueID = uniqueID
 	p.Parent = parent
 }
@@ -174,8 +154,8 @@ func (c *Content) AddFormat(format string, content any) {
 	c.parsed[format] = content
 }
 
-func DecodeIndex(inputPath string) (OutputIndex, error) {
-	var index OutputIndex
+func DecodeIndex(inputPath string) (Index, error) {
+	var index Index
 	if err := index.InitDefaults(inputPath); err != nil {
 		return index, fmt.Errorf("index: failed on initialization: %w", err)
 	}
@@ -259,10 +239,10 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 					id = series.Name
 				}
 
-				var output OutputSeries
+				var output SeriesIndex
 				output.InitDefaults(id, &index)
-				output.Content.Raw = []byte(series.About)
 				output.SeriesInfo = series.SeriesInfo
+				output.Content.Raw = []byte(series.About)
 				output.Books = append(output.Books, book)
 
 				index.Series = append(index.Series, output)
@@ -296,7 +276,7 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 			exists := false
 			for k := range index.Profiles {
 				if author.UniqueID == index.Profiles[k].UniqueID {
-					*author = index.Profiles[k].Profile
+					*author = index.Profiles[k]
 					index.Profiles[k].Books = append(index.Profiles[k].Books, book)
 
 					exists = true
@@ -310,10 +290,10 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 					id = author.Name
 				}
 
-				var output OutputProfile
+				var output Profile
 				output.InitDefaults(id, &index)
+				output = *author
 				output.Content.Raw = []byte(author.About)
-				output.Profile = *author
 				output.Books = append(output.Books, book)
 
 				index.Profiles = append(index.Profiles, output)
@@ -324,8 +304,8 @@ func DecodeIndex(inputPath string) (OutputIndex, error) {
 	return index, nil
 }
 
-func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
-	var book OutputBook
+func DecodeBook(inputPath string, parent *Index) (Book, error) {
+	var book Book
 	if err := book.InitDefaults(inputPath, parent); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
 	}
@@ -368,7 +348,7 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
 
-	var chapters []OutputChapter
+	var chapters []Chapter
 	if err := mapToStruct(navConfMap, &chapters); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
@@ -398,8 +378,8 @@ func DecodeBook(inputPath string, parent *OutputIndex) (OutputBook, error) {
 }
 
 // Returns a list of chapters in a flattened array for the purposes of pagination order.
-func parseNav(chapters *[]OutputChapter, chaptersDir string, book *OutputBook) ([]*OutputChapter, error) {
-	var flattenedList []*OutputChapter
+func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, error) {
+	var flattenedList []*Chapter
 
 	for i := range *chapters {
 		c := &((*chapters)[i])
@@ -434,7 +414,7 @@ func parseNav(chapters *[]OutputChapter, chaptersDir string, book *OutputBook) (
 			}
 		}
 
-		var nested []*OutputChapter
+		var nested []*Chapter
 		if c.Chapters != nil {
 			l, err := parseNav(&c.Chapters, chaptersDir, book)
 			if err != nil {
