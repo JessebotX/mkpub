@@ -69,6 +69,10 @@ type Profile struct {
 	About            string
 	Images           []MediaAsset
 	Links            []ExternalReference
+
+	Parent  *OutputIndex
+	Books   []*OutputBook
+	Content Content
 }
 
 // SeriesInfo describes internal information of a series
@@ -95,6 +99,9 @@ type SeriesIndex struct {
 	SeriesInfo
 
 	UniqueID string
+	Parent   *OutputIndex
+	Books    []*OutputBook
+	Content  Content
 }
 
 // Index is the main object that contains all [Book]s and
@@ -105,12 +112,14 @@ type Index struct {
 	ShortDescription string
 	LanguageCode     string
 	URL              string
-	Profiles         []Profile
-	Series           []SeriesIndex
 	FaviconImageName string
 	Params           map[string]any
 
 	LayoutsDirectory string
+	InputPath        string
+	Books            []OutputBook
+	Series           []OutputSeries
+	Profiles         []OutputProfile
 }
 
 // Book is a written work that contains one or more [Chapter]s, which are
@@ -144,6 +153,11 @@ type Book struct {
 
 	CharacterEncoding string
 	UniqueID          string
+
+	Parent    *OutputIndex
+	InputPath string
+	Content   Content
+	Chapters  []OutputChapter
 }
 
 // Chapter represents a division in a [Book].
@@ -169,5 +183,12 @@ type Chapter struct {
 	Params           map[string]any
 
 	UniqueID string
-	Chapters []Chapter
+	// Chapters []Chapter
+
+	Book      *OutputBook
+	InputPath string
+	Content   Content
+	Chapters  []OutputChapter
+	Next      *OutputChapter
+	Previous  *OutputChapter
 }

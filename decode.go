@@ -27,11 +27,6 @@ var (
 
 type OutputIndex struct {
 	Index
-
-	InputPath string
-	Books     []OutputBook
-	Series    []OutputSeries
-	Profiles  []OutputProfile
 }
 
 func (i *OutputIndex) InitDefaults(inputPath string) error {
@@ -50,11 +45,6 @@ func (i *OutputIndex) InitDefaults(inputPath string) error {
 
 type OutputBook struct {
 	Book
-
-	Parent    *OutputIndex
-	InputPath string
-	Content   Content
-	Chapters  []OutputChapter
 }
 
 func (b *OutputBook) InitDefaults(inputPath string, parent *OutputIndex) error {
@@ -100,13 +90,6 @@ func (b *OutputBook) ChaptersFlattened() []*OutputChapter {
 
 type OutputChapter struct {
 	Chapter
-
-	Book      *OutputBook
-	InputPath string
-	Content   Content
-	Chapters  []OutputChapter
-	Next      *OutputChapter
-	Previous  *OutputChapter
 }
 
 func (c *OutputChapter) InitDefaults(inputPath string, book *OutputBook) error {
@@ -148,10 +131,6 @@ func (c *OutputChapter) ChaptersFlattened() []*OutputChapter {
 
 type OutputSeries struct {
 	SeriesIndex
-
-	Parent  *OutputIndex
-	Books   []*OutputBook
-	Content Content
 }
 
 func (s *OutputSeries) InitDefaults(uniqueID string, parent *OutputIndex) {
@@ -161,10 +140,6 @@ func (s *OutputSeries) InitDefaults(uniqueID string, parent *OutputIndex) {
 
 type OutputProfile struct {
 	Profile
-
-	Parent  *OutputIndex
-	Books   []*OutputBook
-	Content Content
 }
 
 func (p *OutputProfile) InitDefaults(uniqueID string, parent *OutputIndex) {
