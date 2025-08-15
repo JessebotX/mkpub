@@ -80,25 +80,6 @@ func (b *Book) ChaptersFlattened() []*Chapter {
 	return flattened
 }
 
-func (c *Chapter) InitDefaults(inputPath string, book *Book) error {
-	if book == nil {
-		return ErrChapterBookNil
-	}
-
-	absInputPath, err := filepath.Abs(inputPath)
-	if err != nil {
-		return err
-	}
-
-	c.InputPath = absInputPath
-	c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
-	c.Title = c.UniqueID
-	c.LanguageCode = book.LanguageCode
-	c.Book = book
-
-	return nil
-}
-
 func (c *Chapter) ChaptersFlattened() []*Chapter {
 	var flattened []*Chapter
 
@@ -383,7 +364,19 @@ func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, 
 
 	for i := range *chapters {
 		c := &((*chapters)[i])
-		c.InitDefaults(filepath.Join(chaptersDir, c.FileName), book)
+
+		inputPath := filepath.Join(chaptersDir, c.FileName)
+		absInputPath, err := filepath.Abs(inputPath)
+		if err != nil {
+			return nil, err
+		}
+
+		c.InputPath = absInputPath
+		c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
+		if c.LanguageCode == "" {
+			c.LanguageCode = book.LanguageCode
+		}
+		c.Book = book
 
 		if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
 			return nil, ErrChapterMissingPossibleIdentifier
