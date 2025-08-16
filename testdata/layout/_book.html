@@ -6,7 +6,7 @@
 		<li>
 			{{ .Title }}
 
-			{{ if (gt (len .Chapters) 0) }}
+			{{ if .HasSubchapters }}
 			<ul>
 				{{ range .ChaptersFlattened }}
 				<li>{{ .Title }}</li>
@@ -19,7 +19,5 @@
 </nav>
 
 <div class="content">
-
 	{{ .Content.Format "html" }}
-
 </div>
