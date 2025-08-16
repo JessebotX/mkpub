@@ -280,6 +280,10 @@ func (c *Chapter) ChaptersFlattened() []*Chapter {
 	return chaptersFlattened(&c.Chapters)
 }
 
+func (c *Chapter) HasSubchapters() bool {
+	return len(c.Chapters) > 0
+}
+
 func chaptersFlattened(chapters *[]Chapter) []*Chapter {
 	var flattened []*Chapter
 
