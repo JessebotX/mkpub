@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 type Status string
@@ -109,7 +110,7 @@ type Profile struct {
 	Content Content
 }
 
-func (p *Profile) InitDefaults(uniqueID string, parent *Index) {
+func (p *Profile) EnsureDefaultsSet(uniqueID string, parent *Index) {
 	p.UniqueID = uniqueID
 	p.Parent = parent
 }
@@ -143,7 +144,7 @@ type SeriesIndex struct {
 	Content  Content
 }
 
-func (s *SeriesIndex) InitDefaults(uniqueID string, parent *Index) {
+func (s *SeriesIndex) EnsureDefaultsSet(uniqueID string, parent *Index) {
 	s.UniqueID = uniqueID
 	s.Parent = parent
 }
@@ -166,7 +167,7 @@ type Index struct {
 	Profiles         []Profile
 }
 
-func (i *Index) InitDefaults(inputPath string) error {
+func (i *Index) EnsureDefaultsSet(inputPath string) error {
 	i.InputPath = inputPath
 
 	absInputPath, err := filepath.Abs(inputPath)
@@ -204,8 +205,8 @@ type Book struct {
 	Images             []MediaAsset
 	Copyright          string
 	License            string
-	DatePublishedStart string
-	DatePublishedEnd   string
+	DatePublishedStart time.Time
+	DatePublishedEnd   time.Time
 	IDs                map[string]string
 	Params             map[string]any
 
@@ -218,13 +219,14 @@ type Book struct {
 	Chapters  []Chapter
 }
 
-func (b *Book) InitDefaults(inputPath string, parent *Index) error {
+func (b *Book) EnsureDefaultsSet(inputPath string, parent *Index) error {
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err
 	}
 
 	b.InputPath = absInputPath
+	b.CharacterEncoding = "utf-8"
 
 	b.UniqueID = filepath.Base(b.InputPath)
 	b.Title = b.UniqueID

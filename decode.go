@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 )
@@ -18,7 +19,7 @@ const (
 
 func DecodeIndex(inputPath string) (Index, error) {
 	var index Index
-	if err := index.InitDefaults(inputPath); err != nil {
+	if err := index.EnsureDefaultsSet(inputPath); err != nil {
 		return index, fmt.Errorf("index: failed on initialization: %w", err)
 	}
 
@@ -102,7 +103,7 @@ func DecodeIndex(inputPath string) (Index, error) {
 				}
 
 				var output SeriesIndex
-				output.InitDefaults(id, &index)
+				output.EnsureDefaultsSet(id, &index)
 				output.SeriesInfo = series.SeriesInfo
 				output.Content.Raw = []byte(series.About)
 				output.Books = append(output.Books, book)
@@ -153,7 +154,7 @@ func DecodeIndex(inputPath string) (Index, error) {
 				}
 
 				var output Profile
-				output.InitDefaults(id, &index)
+				output.EnsureDefaultsSet(id, &index)
 				output = *author
 				output.Content.Raw = []byte(author.About)
 				output.Books = append(output.Books, book)
@@ -168,7 +169,7 @@ func DecodeIndex(inputPath string) (Index, error) {
 
 func DecodeBook(inputPath string, parent *Index) (Book, error) {
 	var book Book
-	if err := book.InitDefaults(inputPath, parent); err != nil {
+	if err := book.EnsureDefaultsSet(inputPath, parent); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
 	}
 
@@ -197,6 +198,22 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 
 	if ok := book.Status.Valid(); !ok {
 		return book, fmt.Errorf("book \"%s\": unrecognized status \"%s\". Must be one of the following (case-insensitive): %v", book.UniqueID, book.Status, StatusValidValues)
+	}
+
+	val, ok := book.Params["published"]
+	if ok {
+		switch v := val.(type) {
+		case time.Time:
+			book.DatePublishedStart = v
+		case string:
+			parsedDateTime, err := time.Parse("2006-01-02", v)
+			if err != nil {
+				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
+			}
+			book.DatePublishedStart = parsedDateTime
+		default:
+			return book, fmt.Errorf("book \"%s\": unrecognized published_start type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
+		}
 	}
 
 	// --- Parse chapters ---

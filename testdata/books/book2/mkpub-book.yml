@@ -4,6 +4,5 @@ titleSort: "Book 1; or, The Book"
 authors:
   - uniqueID: "John Doe"
 authorsSort: "Doe, John & Doe, Jane"
-published: "2025-05-16 2:05-07:00"
 series:
   - name: The Book
