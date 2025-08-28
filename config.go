@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-type Status string
-
 const (
 	// StatusCompleted indicates the work is fully published, even if it
 	// may receive small modifications in the future.
@@ -35,20 +33,32 @@ const (
 var (
 	// StatusValidValues stores a list of possible values for the Status
 	// config field.
-	StatusValidValues = []Status{
+	StatusValidValues = []string{
 		StatusCompleted,
 		StatusHiatus,
 		StatusInactive,
 		StatusOngoing,
 	}
+
 	ErrChapterBookNil                   = errors.New("chapter's book/parent does not exist")
 	ErrChapterMissingPossibleIdentifier = errors.New("one of the following values must be defined: \"fileName\", \"title\", \"uniqueID\"")
 	ErrContentParsedNil                 = errors.New("parsed content map is not initialized")
 	ErrContentFormatNotFound            = errors.New("parsed content format does not exist")
 )
 
-func (s Status) Valid() bool {
-	return slices.Contains(StatusValidValues, Status(strings.ToLower(string(s))))
+type ErrUnrecognizedStatus struct {
+	UnrecognizedValue string
+}
+
+func (e ErrUnrecognizedStatus) Error() string {
+	var result strings.Builder
+
+	_, _ = result.WriteString("status: failed to recognize value \"")
+	_, _ = result.WriteString(e.UnrecognizedValue)
+	_, _ = result.WriteString("\". Status must be one of the following (case-insensitive): ")
+	_, _ = result.WriteString(strings.Join(StatusValidValues, ", "))
+
+	return result.String()
 }
 
 type Content struct {
@@ -86,7 +96,7 @@ type ExternalReference struct {
 	IsHyperlink bool
 }
 
-// MediaAsset refers to assets such as images and videos that are included within a [Book]
+// MediaAsset refers to assets such as images and videos that are included within a [Book].
 type MediaAsset struct {
 	Name          string
 	AlternateText string
@@ -168,12 +178,11 @@ type Index struct {
 }
 
 func (i *Index) EnsureDefaultsSet(inputPath string) error {
-	i.InputPath = inputPath
-
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err
 	}
+	i.InputPath = absInputPath
 
 	i.Title = filepath.Base(absInputPath)
 	i.LayoutsDirectory = filepath.Join(inputPath, "layout")
@@ -196,7 +205,8 @@ type Book struct {
 	Authors            []Profile
 	AuthorsSort        string
 	Contributors       []Profile
-	Status             Status
+	Publishers         []Profile
+	Status             string
 	Links              []ExternalReference
 	Mirrors            []ExternalReference
 	Tags               []string
@@ -223,6 +233,10 @@ func (b *Book) EnsureDefaultsSet(inputPath string, parent *Index) error {
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err
+	}
+
+	if !slices.Contains(StatusValidValues, strings.ToLower(b.Status)) {
+		return ErrUnrecognizedStatus{b.Status}
 	}
 
 	b.InputPath = absInputPath

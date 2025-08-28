@@ -169,10 +169,6 @@ func DecodeIndex(inputPath string) (Index, error) {
 
 func DecodeBook(inputPath string, parent *Index) (Book, error) {
 	var book Book
-	if err := book.EnsureDefaultsSet(inputPath, parent); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
-	}
-
 	// --- Unmarshal config file ---
 	confBody, err := os.ReadFile(filepath.Join(inputPath, BookConfigName))
 	if err != nil {
@@ -196,10 +192,6 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 		book.Status = StatusCompleted
 	}
 
-	if ok := book.Status.Valid(); !ok {
-		return book, fmt.Errorf("book \"%s\": unrecognized status \"%s\". Must be one of the following (case-insensitive): %v", book.UniqueID, book.Status, StatusValidValues)
-	}
-
 	val, ok := book.Params["published"]
 	if ok {
 		switch v := val.(type) {
@@ -214,6 +206,10 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 		default:
 			return book, fmt.Errorf("book \"%s\": unrecognized published_start type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
 		}
+	}
+
+	if err := book.EnsureDefaultsSet(inputPath, parent); err != nil {
+		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
 	}
 
 	// --- Parse chapters ---
