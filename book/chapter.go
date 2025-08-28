@@ -9,7 +9,6 @@ import (
 
 var (
 	ErrChapterMissingUniqueID = errors.New("chapter: UniqueID missing")
-	ErrChapterEmptyUniqueID   = errors.New("chapter: UniqueID cannot be empty (must have at least 1 non-space character)")
 	ErrChapterMissingBook     = errors.New("chapter: reference to parent Book missing")
 )
 
@@ -32,6 +31,7 @@ type Chapter struct {
 	Licenses          []string
 	Extra             map[string]any
 
+	FileName  string
 	Assets    []Asset
 	InputPath string
 	Book      *Book
@@ -71,12 +71,22 @@ func (c *Chapter) EnsureDefaults() error {
 		return ErrChapterMissingBook
 	}
 
-	if c.UniqueID == "" {
+	c.UniqueID = strings.TrimSpace(c.UniqueID)
+
+	if c.UniqueID == "" && c.Title == "" {
 		return ErrChapterMissingUniqueID
 	}
-	c.UniqueID = strings.TrimSpace(c.UniqueID)
+
 	if c.UniqueID == "" {
-		return ErrChapterEmptyUniqueID
+		c.UniqueID = strings.TrimSpace(c.Title)
+
+		if c.UniqueID == "" {
+			return ErrChapterMissingUniqueID
+		}
+	}
+
+	if c.Title == "" {
+		c.Title = c.UniqueID
 	}
 
 	return nil

@@ -58,7 +58,7 @@ func (b *BuildCommand) Run(context *Context) error {
 		fmt.Println(terminalStyle("Start decoding...", TerminalTextBold))
 	}
 
-	index, err := mkpub.DecodeIndex(b.InputDirectory)
+	index, err := mkpub.DecodeMainIndex(b.InputDirectory)
 	if err != nil {
 		return err
 	}

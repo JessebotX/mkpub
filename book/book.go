@@ -132,3 +132,54 @@ func (b *Book) EnsureDefaults() error {
 
 	return nil
 }
+
+func (b *Book) ParseDatePublishedStart(input string) error {
+	t, err := parseDateInput(input)
+	if err != nil {
+		return err
+	}
+
+	b.DatePublishedStart = t
+
+	return nil
+}
+
+func (b *Book) ParseDatePublishedEnd(input string) error {
+	t, err := parseDateInput(input)
+	if err != nil {
+		return err
+	}
+
+	b.DatePublishedEnd = t
+
+	return nil
+}
+
+func parseDateInput(input string) (time.Time, error) {
+	t, err := time.Parse("2006-01-02 15:14 -07:00", input)
+	if err == nil {
+		return t, nil
+	}
+
+	t, err = time.Parse("2006-01-02 15:14", input)
+	if err == nil {
+		return t, nil
+	}
+
+	t, err = time.Parse("2006-01-02", input)
+	if err == nil {
+		return t, nil
+	}
+
+	t, err = time.Parse("2006-01", input)
+	if err == nil {
+		return t, nil
+	}
+
+	t, err = time.Parse("2006", input)
+	if err == nil {
+		return t, nil
+	}
+
+	return t, err
+}

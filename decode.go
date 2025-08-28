@@ -9,325 +9,237 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/JessebotX/mkpub/book"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	IndexConfigName   = "mkpub.yml"
-	BookConfigName    = "mkpub-book.yml"
-	BookNavConfigName = "mkpub-book-nav.yml"
+	MainIndexConfigName    = "mkpub.yml"
+	MainIndexBooksDir      = "books"
+	BookConfigName         = "book.yml"
+	BookAssetsDir          = "assets"
+	BookChaptersDir        = "chapters"
+	BookChaptersConfigName = "nav.yml"
 )
 
-func DecodeIndex(inputPath string) (Index, error) {
-	var index Index
-	if err := index.EnsureDefaultsSet(inputPath); err != nil {
-		return index, fmt.Errorf("index: failed on initialization: %w", err)
-	}
+func DecodeMainIndex(inputPath string) (MainIndex, error) {
+	var index MainIndex
 
-	// --- Unmarshal config file ---
-	confBody, err := os.ReadFile(filepath.Join(inputPath, IndexConfigName))
+	/*** Parse config ***/
+
+	conf, err := yamlFileToMap(filepath.Join(inputPath, MainIndexConfigName))
 	if err != nil {
-		return index, fmt.Errorf("index: failed to read %s: %w", IndexConfigName, err)
+		return index, fmt.Errorf("index: parse %s: %w", MainIndexConfigName, err)
+	}
+	defer clear(conf)
+
+	if err := mapToStruct(conf, &index); err != nil {
+		return index, fmt.Errorf("index: parse %s: %w", MainIndexConfigName, err)
 	}
 
-	var confMap map[string]any
-	if err := yaml.Unmarshal(confBody, &confMap); err != nil {
-		return index, fmt.Errorf("index: failed to parse %s: %w", IndexConfigName, err)
-	}
+	/*** Parse books ***/
 
-	if err := mapToStruct(confMap, &index); err != nil {
-		return index, fmt.Errorf("index: failed to parse %s: %w", IndexConfigName, err)
-	}
-
-	index.Params = confMap
-
-	// --- Books ---
-	booksDir := filepath.Join(inputPath, "books")
-	dirs, err := os.ReadDir(booksDir)
+	books, err := bookDirsToBooks(filepath.Join(inputPath, MainIndexBooksDir), &index)
 	if err != nil {
-		return index, fmt.Errorf("index: failed to read books directory: %w", err)
+		return index, err
 	}
-
-	for i := range dirs {
-		dir := dirs[i]
-
-		if !dir.IsDir() {
-			continue
-		}
-
-		book, err := DecodeBook(filepath.Join(booksDir, dir.Name()), &index)
-		if err != nil {
-			return index, err
-		}
-
-		index.Books = append(index.Books, book)
-	}
-
-	// --- Series ---
-	for i := range index.Books {
-		book := &index.Books[i]
-
-		if len(book.Series) == 0 {
-			continue
-		}
-
-		for j := range book.Series {
-			series := &book.Series[j]
-
-			if series.IndexID == "" && series.Name == "" {
-				return index, fmt.Errorf("index: series %d must have either an indexID or a name", j)
-			}
-
-			if series.Name == "" {
-				series.Name = series.IndexID
-			}
-
-			if series.IndexID == "" {
-				series.IndexID = series.Name
-			}
-
-			exists := false
-			for k := range index.Series {
-				if series.IndexID == index.Series[k].UniqueID {
-					series.SeriesInfo = index.Series[k].SeriesInfo
-					index.Series[k].Books = append(index.Series[k].Books, book)
-
-					exists = true
-					break
-				}
-			}
-
-			if !exists {
-				id := series.IndexID
-				if id == "" {
-					id = series.Name
-				}
-
-				var output SeriesIndex
-				output.EnsureDefaultsSet(id, &index)
-				output.SeriesInfo = series.SeriesInfo
-				output.Content.Raw = []byte(series.About)
-				output.Books = append(output.Books, book)
-
-				index.Series = append(index.Series, output)
-			}
-		}
-	}
-
-	// --- Authors ---
-	for i := range index.Books {
-		book := &index.Books[i]
-
-		if len(book.Authors) == 0 {
-			continue
-		}
-
-		for j := range book.Authors {
-			author := &book.Authors[j]
-
-			if author.UniqueID == "" && author.Name == "" {
-				return index, fmt.Errorf("index: author %d must have either an indexID or a name", j)
-			}
-
-			if author.Name == "" {
-				author.Name = author.UniqueID
-			}
-
-			if author.UniqueID == "" {
-				author.UniqueID = author.Name
-			}
-
-			exists := false
-			for k := range index.Profiles {
-				if author.UniqueID == index.Profiles[k].UniqueID {
-					*author = index.Profiles[k]
-					index.Profiles[k].Books = append(index.Profiles[k].Books, book)
-
-					exists = true
-					break
-				}
-			}
-
-			if !exists {
-				id := author.UniqueID
-				if id == "" {
-					id = author.Name
-				}
-
-				var output Profile
-				output.EnsureDefaultsSet(id, &index)
-				output = *author
-				output.Content.Raw = []byte(author.About)
-				output.Books = append(output.Books, book)
-
-				index.Profiles = append(index.Profiles, output)
-			}
-		}
-	}
+	index.Books = books
 
 	return index, nil
 }
 
-func DecodeBook(inputPath string, parent *Index) (Book, error) {
-	var book Book
-	if err := book.EnsureDefaultsSet(inputPath, parent); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
-	}
+func bookDirsToBooks(booksDir string, index *MainIndex) ([]BookIndex, error) {
+	var books []BookIndex
 
-	// --- Unmarshal config file ---
-	confBody, err := os.ReadFile(filepath.Join(inputPath, BookConfigName))
+	items, err := os.ReadDir(booksDir)
 	if err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to read %s: %w", book.UniqueID, BookConfigName, err)
+		return books, fmt.Errorf("index: books directory: %w", err)
 	}
 
-	var confMap map[string]any
-	if err := yaml.Unmarshal(confBody, &confMap); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookConfigName, err)
+	for _, item := range items {
+		if !item.IsDir() {
+			continue
+		}
+
+		var g errgroup.Group
+		var book BookIndex
+
+		g.Go(func() error {
+			book, err = DecodeBook(filepath.Join(booksDir, item.Name()), index)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := g.Wait(); err != nil {
+			return books, err
+		}
+
+		books = append(books, book)
 	}
 
-	if err := mapToStruct(confMap, &book); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookConfigName, err)
+	return books, nil
+}
+
+func DecodeBook(inputPath string, index *MainIndex) (BookIndex, error) {
+	b := BookIndex{
+		Book: book.Book{
+			InputPath: inputPath,
+		},
+		Index: index,
 	}
 
-	// --- Further parsing ---
-	book.Params = confMap
-	book.Content.Raw = []byte(book.About)
+	/*** Parse config ***/
 
-	if book.Status == "" {
-		book.Status = StatusCompleted
+	conf, err := yamlFileToMap(filepath.Join(inputPath, BookConfigName))
+	if err != nil {
+		return b, fmt.Errorf("book: parse %s: %w", BookConfigName, err)
+	}
+	defer clear(conf)
+
+	f, err := os.ReadFile(filepath.Join(inputPath, BookConfigName))
+	if err != nil {
+		return b, err
 	}
 
-	if ok := book.Status.Valid(); !ok {
-		return book, fmt.Errorf("book \"%s\": unrecognized status \"%s\". Must be one of the following (case-insensitive): %v", book.UniqueID, book.Status, StatusValidValues)
+	if err := yaml.Unmarshal(f, &conf); err != nil {
+		return b, fmt.Errorf("book: parse %s: %w", BookConfigName, err)
 	}
 
-	val, ok := book.Params["published"]
+	/*** Parse date strings ***/
+
+	dateStartInput, ok := conf["publishedStart"]
 	if ok {
-		switch v := val.(type) {
-		case time.Time:
-			book.DatePublishedStart = v
+		switch v := dateStartInput.(type) {
 		case string:
-			parsedDateTime, err := time.Parse("2006-01-02", v)
-			if err != nil {
-				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
+			if err := b.ParseDatePublishedStart(v); err != nil {
+				return b, err
 			}
-			book.DatePublishedStart = parsedDateTime
+		case time.Time:
+			b.DatePublishedStart = v
 		default:
-			return book, fmt.Errorf("book \"%s\": unrecognized published_start type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
+			return b, fmt.Errorf("book: parse %s: unsupported publishedStart type. Must be either a time.Time or a string", BookConfigName)
 		}
 	}
 
-	// --- Parse chapters ---
-	navBody, err := os.ReadFile(filepath.Join(inputPath, BookNavConfigName))
+	dateEndInput, ok := conf["publishedEnd"]
+	if ok {
+		switch v := dateEndInput.(type) {
+		case string:
+			if err := b.ParseDatePublishedEnd(v); err != nil {
+				return b, err
+			}
+		case time.Time:
+			b.DatePublishedEnd = v
+		default:
+			return b, fmt.Errorf("book: parse %s: unsupported publishedEnd type. Must be either a time.Time or a string", BookConfigName)
+		}
+	}
+
+	/*** Set defaults and ensure book is valid ***/
+
+	if err := b.EnsureDefaults(); err != nil {
+		return b, err
+	}
+
+	/*** parse chapters ***/
+	chapters, err := decodeAllChapters(filepath.Join(inputPath, BookChaptersConfigName), filepath.Join(inputPath, BookChaptersDir), &b)
 	if err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to read %s: %w", book.UniqueID, BookNavConfigName, err)
+		return b, err
 	}
+	b.Chapters = chapters
 
-	var navConfMap []any
-	if err := yaml.Unmarshal(navBody, &navConfMap); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
-	}
-
-	var chapters []Chapter
-	if err := mapToStruct(navConfMap, &chapters); err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
-	}
-
-	chaptersDir := filepath.Join(inputPath, "chapters")
-	flattenedChapters, err := parseNav(&chapters, chaptersDir, &book)
-	if err != nil {
-		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
-	}
-
-	// Set next and previous values
-	for i := range flattenedChapters {
-		c := flattenedChapters[i]
-
-		if i-1 >= 0 {
-			c.Previous = flattenedChapters[i-1]
-		}
-
-		if i+1 < len(flattenedChapters) {
-			c.Next = flattenedChapters[i+1]
-		}
-	}
-
-	book.Chapters = chapters
-
-	return book, nil
+	return b, nil
 }
 
-// Returns a list of chapters in a flattened array for the purposes of pagination order.
-func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, error) {
-	var flattenedList []*Chapter
+func decodeAllChapters(navFilePath, chaptersDir string, b *BookIndex) ([]book.Chapter, error) {
+	var chapters []book.Chapter
 
-	for i := range *chapters {
-		c := &((*chapters)[i])
+	conf, err := yamlFileToArray(navFilePath)
+	if err != nil {
+		return chapters, fmt.Errorf("book: parse %s: %w", BookChaptersConfigName, err)
+	}
 
-		inputPath := filepath.Join(chaptersDir, c.FileName)
-		absInputPath, err := filepath.Abs(inputPath)
+	if err := mapToStruct(conf, &chapters); err != nil {
+		return chapters, fmt.Errorf("book: parse %s: %w", BookChaptersConfigName, err)
+	}
+
+	var g errgroup.Group
+
+	for i := range chapters {
+		g.Go(func() error {
+			return parseChapter(&chapters[i], chaptersDir, b)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return chapters, err
+	}
+
+	return chapters, nil
+}
+
+func parseChapter(c *book.Chapter, chaptersDir string, b *BookIndex) error {
+	c.Book = &b.Book
+
+	if c.FileName != "" {
+		contents, err := os.ReadFile(filepath.Join(chaptersDir, c.FileName))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		c.InputPath = absInputPath
-		c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
-		if c.LanguageCode == "" {
-			c.LanguageCode = book.LanguageCode
-		}
-		c.Book = book
-
-		if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
-			return nil, ErrChapterMissingPossibleIdentifier
-		}
-
-		// If either title or uniqueID is missing...
-		if c.Title != "" && c.UniqueID == "" {
-			c.UniqueID = c.Title
-		} else if c.Title == "" && c.UniqueID != "" {
-			c.Title = c.UniqueID
-		}
-
-		if c.FileName != "" {
-			raw, err := os.ReadFile(filepath.Join(chaptersDir, c.FileName))
-			if err != nil {
-				return nil, err
-			}
-			c.Content.Raw = raw
-			c.InputPath = filepath.Join(chaptersDir, c.FileName)
-
-			// if title or uniqueID is still missing, use fileName without the file extension
-			if c.UniqueID == "" {
-				c.UniqueID = strings.TrimSuffix(c.FileName, ".md")
-			}
-
-			if c.Title == "" {
-				c.Title = strings.TrimSuffix(c.FileName, ".md")
-			}
-		}
-
-		var nested []*Chapter
-		if c.Chapters != nil {
-			l, err := parseNav(&c.Chapters, chaptersDir, book)
-			if err != nil {
-				return nil, err
-			}
-			nested = l
-		}
-
-		flattenedList = append(flattenedList, c)
-		flattenedList = append(flattenedList, nested...)
+		c.Text.Raw = contents
+	}
+	c.UniqueID = strings.TrimSuffix(c.FileName, ".md")
+	if c.UniqueID == "" {
+		c.UniqueID = strings.ToLower(c.Title)
 	}
 
-	return flattenedList, nil
+	if err := c.EnsureDefaults(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func mapToStruct[M map[string]any | []any](m M, s any) error {
-	body, err := json.Marshal(m)
+func yamlFileToArray(configPath string) ([]any, error) {
+	var conf []any
+
+	f, err := os.ReadFile(configPath)
+	if err != nil {
+		return conf, err
+	}
+
+	if err := yaml.Unmarshal(f, &conf); err != nil {
+		return conf, err
+	}
+
+	return conf, nil
+}
+
+func yamlFileToMap(configPath string) (map[string]any, error) {
+	var conf map[string]any
+
+	f, err := os.ReadFile(configPath)
+	if err != nil {
+		return conf, err
+	}
+
+	if err := yaml.Unmarshal(f, &conf); err != nil {
+		return conf, err
+	}
+
+	return conf, nil
+}
+
+func mapToStruct[T []any | map[string]any](m T, s any) error {
+	jsonBody, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
 
-	if err := json.Unmarshal(body, s); err != nil {
+	if err := json.Unmarshal(jsonBody, s); err != nil {
 		return err
 	}
 
