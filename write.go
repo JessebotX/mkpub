@@ -145,8 +145,8 @@ func writeBookToStaticWebsite(book *config.Book, outputDir string) error {
 	defer wrBook.Close()
 
 	// --- Book main page ---
-
-	bookTmplPath := filepath.Join("layout", "_book.html")
+	index := book.Parent
+	bookTmplPath := filepath.Join(index.LayoutsDirectory, "_book.html")
 	bookTmpl, err := template.New("_book.html").Funcs(TemplateFuncs).ParseFiles(bookTmplPath)
 	if err != nil {
 		err = fmt.Errorf("book \"%s\" (%s): failed to read template file %s: %w", book.Title, book.UniqueID, bookTmplPath, err)

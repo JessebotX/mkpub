@@ -115,7 +115,7 @@ func (b *Book) EnsureDefaults(inputPath string, parent *Index) error {
 		return ErrUnrecognizedStatus{b.Status}
 	}
 
-	if parent == nil {
+	if b.Parent == nil {
 		b.Parent = parent
 	}
 
