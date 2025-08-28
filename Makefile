@@ -6,13 +6,14 @@ GOLINTEXE = staticcheck
 GOLINTFLAGS =
 GOLINTINPUT = ./...
 
+BINSRCDIR = ./cmd
 BINEXE = mkpub
 
 all: build
 
 build:
 	$(GOEXE) mod download
-	$(GOEXE) build ./$(BINSRCDIR)/$(BINEXE)
+	$(GOEXE) build $(BINSRCDIR)/$(BINEXE)
 
 fmt: format
 format:

@@ -9,36 +9,33 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+
+	"github.com/JessebotX/mkpub/config"
 )
 
 const (
 	IndexConfigName   = "mkpub.yml"
-	BookConfigName    = "mkpub-book.yml"
-	BookNavConfigName = "mkpub-book-nav.yml"
+	BookConfigName    = "book.yml"
+	BookNavConfigName = "nav.yml"
 )
 
-func DecodeIndex(inputPath string) (Index, error) {
-	var index Index
-	if err := index.EnsureDefaultsSet(inputPath); err != nil {
-		return index, fmt.Errorf("index: failed on initialization: %w", err)
-	}
+func DecodeIndex(inputPath string) (config.Index, error) {
+	var index config.Index
 
 	// --- Unmarshal config file ---
-	confBody, err := os.ReadFile(filepath.Join(inputPath, IndexConfigName))
+
+	confMap, err := yamlFileToMap(filepath.Join(inputPath, IndexConfigName))
 	if err != nil {
 		return index, fmt.Errorf("index: failed to read %s: %w", IndexConfigName, err)
-	}
-
-	var confMap map[string]any
-	if err := yaml.Unmarshal(confBody, &confMap); err != nil {
-		return index, fmt.Errorf("index: failed to parse %s: %w", IndexConfigName, err)
 	}
 
 	if err := mapToStruct(confMap, &index); err != nil {
 		return index, fmt.Errorf("index: failed to parse %s: %w", IndexConfigName, err)
 	}
 
-	index.Params = confMap
+	if err := index.EnsureDefaultsSet(inputPath); err != nil {
+		return index, fmt.Errorf("index: failed on initialization: %w", err)
+	}
 
 	// --- Books ---
 	booksDir := filepath.Join(inputPath, "books")
@@ -102,7 +99,7 @@ func DecodeIndex(inputPath string) (Index, error) {
 					id = series.Name
 				}
 
-				var output SeriesIndex
+				var output config.SeriesIndex
 				output.EnsureDefaultsSet(id, &index)
 				output.SeriesInfo = series.SeriesInfo
 				output.Content.Raw = []byte(series.About)
@@ -153,7 +150,7 @@ func DecodeIndex(inputPath string) (Index, error) {
 					id = author.Name
 				}
 
-				var output Profile
+				var output config.Profile
 				output.EnsureDefaultsSet(id, &index)
 				output = *author
 				output.Content.Raw = []byte(author.About)
@@ -167,16 +164,11 @@ func DecodeIndex(inputPath string) (Index, error) {
 	return index, nil
 }
 
-func DecodeBook(inputPath string, parent *Index) (Book, error) {
-	var book Book
+func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
+	var book config.Book
 	// --- Unmarshal config file ---
-	confBody, err := os.ReadFile(filepath.Join(inputPath, BookConfigName))
+	confMap, err := yamlFileToMap(filepath.Join(inputPath, BookConfigName))
 	if err != nil {
-		return book, fmt.Errorf("book \"%s\": failed to read %s: %w", book.UniqueID, BookConfigName, err)
-	}
-
-	var confMap map[string]any
-	if err := yaml.Unmarshal(confBody, &confMap); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookConfigName, err)
 	}
 
@@ -185,14 +177,13 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 	}
 
 	// --- Further parsing ---
-	book.Params = confMap
 	book.Content.Raw = []byte(book.About)
 
 	if book.Status == "" {
-		book.Status = StatusCompleted
+		book.Status = config.StatusCompleted
 	}
 
-	val, ok := book.Params["published"]
+	val, ok := confMap["published"]
 	if ok {
 		switch v := val.(type) {
 		case time.Time:
@@ -208,7 +199,7 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 		}
 	}
 
-	if err := book.EnsureDefaultsSet(inputPath, parent); err != nil {
+	if err := book.EnsureDefaults(inputPath, parent); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
 	}
 
@@ -223,7 +214,7 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
 
-	var chapters []Chapter
+	var chapters []config.Chapter
 	if err := mapToStruct(navConfMap, &chapters); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed to parse %s: %w", book.UniqueID, BookNavConfigName, err)
 	}
@@ -253,8 +244,8 @@ func DecodeBook(inputPath string, parent *Index) (Book, error) {
 }
 
 // Returns a list of chapters in a flattened array for the purposes of pagination order.
-func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, error) {
-	var flattenedList []*Chapter
+func parseNav(chapters *[]config.Chapter, chaptersDir string, book *config.Book) ([]*config.Chapter, error) {
+	var flattenedList []*config.Chapter
 
 	for i := range *chapters {
 		c := &((*chapters)[i])
@@ -272,9 +263,9 @@ func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, 
 		}
 		c.Book = book
 
-		if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
-			return nil, ErrChapterMissingPossibleIdentifier
-		}
+		// if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
+		// 	return nil, ErrChapterMissingPossibleIdentifier
+		// }
 
 		// If either title or uniqueID is missing...
 		if c.Title != "" && c.UniqueID == "" {
@@ -301,7 +292,7 @@ func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, 
 			}
 		}
 
-		var nested []*Chapter
+		var nested []*config.Chapter
 		if c.Chapters != nil {
 			l, err := parseNav(&c.Chapters, chaptersDir, book)
 			if err != nil {
@@ -315,6 +306,21 @@ func parseNav(chapters *[]Chapter, chaptersDir string, book *Book) ([]*Chapter, 
 	}
 
 	return flattenedList, nil
+}
+
+func yamlFileToMap(configPath string) (map[string]any, error) {
+	var conf map[string]any
+
+	f, err := os.ReadFile(configPath)
+	if err != nil {
+		return conf, err
+	}
+
+	if err := yaml.Unmarshal(f, &conf); err != nil {
+		return conf, err
+	}
+
+	return conf, nil
 }
 
 func mapToStruct[M map[string]any | []any](m M, s any) error {

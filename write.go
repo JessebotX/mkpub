@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/JessebotX/mkpub/config"
+
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -33,7 +35,7 @@ var (
 	)
 )
 
-func WriteIndexToStaticWebsite(index *Index, outputDir string) error {
+func WriteIndexToStaticWebsite(index *config.Index, outputDir string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
@@ -131,7 +133,7 @@ func WriteIndexToStaticWebsite(index *Index, outputDir string) error {
 	return nil
 }
 
-func writeBookToStaticWebsite(book *Book, outputDir string) error {
+func writeBookToStaticWebsite(book *config.Book, outputDir string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
@@ -144,8 +146,7 @@ func writeBookToStaticWebsite(book *Book, outputDir string) error {
 
 	// --- Book main page ---
 
-	index := book.Parent
-	bookTmplPath := filepath.Join(index.LayoutsDirectory, "_book.html")
+	bookTmplPath := filepath.Join("layout", "_book.html")
 	bookTmpl, err := template.New("_book.html").Funcs(TemplateFuncs).ParseFiles(bookTmplPath)
 	if err != nil {
 		err = fmt.Errorf("book \"%s\" (%s): failed to read template file %s: %w", book.Title, book.UniqueID, bookTmplPath, err)
@@ -169,7 +170,7 @@ func writeBookToStaticWebsite(book *Book, outputDir string) error {
 
 	coverName := book.CoverImage.Name
 	if coverName != "" {
-		if err := copyFile(filepath.Join(book.InputPath, "images", coverName), filepath.Join(imagesOutputDir, coverName)); err != nil {
+		if err := copyFile(filepath.Join(book.InputDirectory, "images", coverName), filepath.Join(imagesOutputDir, coverName)); err != nil {
 			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
 			writeErrHTML(err, wrBook)
 			return err
@@ -198,7 +199,7 @@ func writeBookToStaticWebsite(book *Book, outputDir string) error {
 	return nil
 }
 
-func writeChapterToStaticWebsite(chapter *Chapter, outputPath string) error {
+func writeChapterToStaticWebsite(chapter *config.Chapter, outputPath string) error {
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return err
