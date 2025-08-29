@@ -1,5 +1,7 @@
 package config
 
+import "strings"
+
 // SeriesInfo describes internal information of a series
 type SeriesInfo struct {
 	Name             string
@@ -29,7 +31,13 @@ type SeriesIndex struct {
 	Content  Content
 }
 
-func (s *SeriesIndex) EnsureDefaultsSet(uniqueID string, parent *Index) {
-	s.UniqueID = uniqueID
-	s.Parent = parent
+func (s *SeriesIndex) SetDefaults(uniqueID string, parent *Index) {
+	if s.Parent == nil {
+		s.Parent = parent
+	}
+
+	uniqueID = strings.TrimSpace(uniqueID)
+	if s.UniqueID == "" {
+		s.UniqueID = uniqueID
+	}
 }

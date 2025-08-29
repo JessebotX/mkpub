@@ -22,7 +22,7 @@ type Index struct {
 	Profiles         []Profile
 }
 
-func (i *Index) EnsureDefaultsSet(inputPath string) error {
+func (i *Index) SetDefaults(inputPath string) error {
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err

@@ -17,13 +17,13 @@ const (
 	IndexConfigName   = "mkpub.yml"
 	BookConfigName    = "book.yml"
 	BookNavConfigName = "nav.yml"
+	IndexBooksDir     = "books"
 )
 
 func DecodeIndex(inputPath string) (config.Index, error) {
 	var index config.Index
 
 	// --- Unmarshal config file ---
-
 	confMap, err := yamlFileToMap(filepath.Join(inputPath, IndexConfigName))
 	if err != nil {
 		return index, fmt.Errorf("index: failed to read %s: %w", IndexConfigName, err)
@@ -33,31 +33,16 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 		return index, fmt.Errorf("index: failed to parse %s: %w", IndexConfigName, err)
 	}
 
-	if err := index.EnsureDefaultsSet(inputPath); err != nil {
+	if err := index.SetDefaults(inputPath); err != nil {
 		return index, fmt.Errorf("index: failed on initialization: %w", err)
 	}
 
 	// --- Books ---
-	booksDir := filepath.Join(inputPath, "books")
-	dirs, err := os.ReadDir(booksDir)
+	books, err := decodeBooks(filepath.Join(inputPath, IndexBooksDir), &index)
 	if err != nil {
-		return index, fmt.Errorf("index: failed to read books directory: %w", err)
+		return index, err
 	}
-
-	for i := range dirs {
-		dir := dirs[i]
-
-		if !dir.IsDir() {
-			continue
-		}
-
-		book, err := DecodeBook(filepath.Join(booksDir, dir.Name()), &index)
-		if err != nil {
-			return index, err
-		}
-
-		index.Books = append(index.Books, book)
-	}
+	index.Books = books
 
 	// --- Series ---
 	for i := range index.Books {
@@ -100,7 +85,7 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 				}
 
 				var output config.SeriesIndex
-				output.EnsureDefaultsSet(id, &index)
+				output.SetDefaults(id, &index)
 				output.SeriesInfo = series.SeriesInfo
 				output.Content.Raw = []byte(series.About)
 				output.Books = append(output.Books, book)
@@ -151,7 +136,7 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 				}
 
 				var output config.Profile
-				output.EnsureDefaultsSet(id, &index)
+				output.SetDefaults(id, &index)
 				output = *author
 				output.Content.Raw = []byte(author.About)
 				output.Books = append(output.Books, book)
@@ -162,6 +147,32 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 	}
 
 	return index, nil
+}
+
+func decodeBooks(booksDir string, index *config.Index) ([]config.Book, error) {
+	var books []config.Book
+
+	dirs, err := os.ReadDir(booksDir)
+	if err != nil {
+		return books, fmt.Errorf("index: failed to read books directory: %w", err)
+	}
+
+	for i := range dirs {
+		dir := dirs[i]
+
+		if !dir.IsDir() {
+			continue
+		}
+
+		book, err := DecodeBook(filepath.Join(booksDir, dir.Name()), index)
+		if err != nil {
+			return books, err
+		}
+
+		books = append(books, book)
+	}
+
+	return books, nil
 }
 
 func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
@@ -179,27 +190,35 @@ func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
 	// --- Further parsing ---
 	book.Content.Raw = []byte(book.About)
 
-	if book.Status == "" {
-		book.Status = config.StatusCompleted
-	}
-
-	val, ok := confMap["published"]
+	dateStartInput, ok := confMap["published_start"]
 	if ok {
-		switch v := val.(type) {
+		switch v := dateStartInput.(type) {
 		case time.Time:
 			book.DatePublishedStart = v
 		case string:
-			parsedDateTime, err := time.Parse("2006-01-02", v)
-			if err != nil {
+			if err := book.SetDatePublishedStart(v); err != nil {
 				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 			}
-			book.DatePublishedStart = parsedDateTime
 		default:
 			return book, fmt.Errorf("book \"%s\": unrecognized published_start type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
 		}
 	}
 
-	if err := book.EnsureDefaults(inputPath, parent); err != nil {
+	dateEndInput, ok := confMap["published_end"]
+	if ok {
+		switch v := dateEndInput.(type) {
+		case time.Time:
+			book.DatePublishedEnd = v
+		case string:
+			if err := book.SetDatePublishedEnd(v); err != nil {
+				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
+			}
+		default:
+			return book, fmt.Errorf("book \"%s\": unrecognized published_end type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
+		}
+	}
+
+	if err := book.SetDefaults(inputPath, parent); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
 	}
 

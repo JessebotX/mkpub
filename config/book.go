@@ -89,7 +89,7 @@ type Book struct {
 	Chapters       []Chapter
 }
 
-func (b *Book) EnsureDefaults(inputPath string, parent *Index) error {
+func (b *Book) SetDefaults(inputPath string, parent *Index) error {
 	absInputPath, err := filepath.Abs(inputPath)
 	if err != nil {
 		return err
@@ -111,6 +111,10 @@ func (b *Book) EnsureDefaults(inputPath string, parent *Index) error {
 
 	// trim trailing spaces and ignore case
 	b.Status = strings.ToLower(strings.TrimSpace(b.Status))
+	if b.Status == "" {
+		b.Status = StatusCompleted
+	}
+
 	if !slices.Contains(StatusValidValues, strings.ToLower(b.Status)) {
 		return ErrUnrecognizedStatus{b.Status}
 	}
@@ -137,4 +141,26 @@ func (b *Book) EnsureDefaults(inputPath string, parent *Index) error {
 
 func (b *Book) ChaptersFlattened() []*Chapter {
 	return chaptersFlattened(&b.Chapters)
+}
+
+func (b *Book) SetDatePublishedStart(input string) error {
+	t, err := parseDateTime(input)
+	if err != nil {
+		return err
+	}
+
+	b.DatePublishedEnd = t
+
+	return nil
+}
+
+func (b *Book) SetDatePublishedEnd(input string) error {
+	t, err := parseDateTime(input)
+	if err != nil {
+		return err
+	}
+
+	b.DatePublishedEnd = t
+
+	return nil
 }

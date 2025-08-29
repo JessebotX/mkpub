@@ -17,7 +17,7 @@ type Profile struct {
 	Content Content
 }
 
-func (p *Profile) EnsureDefaultsSet(uniqueID string, parent *Index) {
+func (p *Profile) SetDefaults(uniqueID string, parent *Index) {
 	p.UniqueID = uniqueID
 	p.Parent = parent
 }
