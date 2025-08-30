@@ -143,19 +143,19 @@ func (b *Book) ChaptersFlattened() []*Chapter {
 	return chaptersFlattened(&b.Chapters)
 }
 
-func (b *Book) SetDatePublishedStart(input string) error {
-	t, err := parseDateTime(input)
+func (b *Book) SetDatePublishedStartFromMap(key string, m map[string]any) error {
+	t, err := dateFromMap(key, m)
 	if err != nil {
 		return err
 	}
 
-	b.DatePublishedEnd = t
+	b.DatePublishedStart = t
 
 	return nil
 }
 
-func (b *Book) SetDatePublishedEnd(input string) error {
-	t, err := parseDateTime(input)
+func (b *Book) SetDatePublishedEndFromMap(key string, m map[string]any) error {
+	t, err := dateFromMap(key, m)
 	if err != nil {
 		return err
 	}

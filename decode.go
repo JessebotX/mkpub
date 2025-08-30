@@ -2,11 +2,11 @@ package mkpub
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/goccy/go-yaml"
 
@@ -177,6 +177,7 @@ func decodeBooks(booksDir string, index *config.Index) ([]config.Book, error) {
 
 func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
 	var book config.Book
+
 	// --- Unmarshal config file ---
 	confMap, err := yamlFileToMap(filepath.Join(inputPath, BookConfigName))
 	if err != nil {
@@ -190,32 +191,12 @@ func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
 	// --- Further parsing ---
 	book.Content.Raw = []byte(book.About)
 
-	dateStartInput, ok := confMap["published_start"]
-	if ok {
-		switch v := dateStartInput.(type) {
-		case time.Time:
-			book.DatePublishedStart = v
-		case string:
-			if err := book.SetDatePublishedStart(v); err != nil {
-				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
-			}
-		default:
-			return book, fmt.Errorf("book \"%s\": unrecognized published_start type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
-		}
+	if err := book.SetDatePublishedStartFromMap("publishedstart", confMap); err != nil && !errors.Is(err, config.ErrDateFromMapKeyNotFound) {
+		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
 
-	dateEndInput, ok := confMap["published_end"]
-	if ok {
-		switch v := dateEndInput.(type) {
-		case time.Time:
-			book.DatePublishedEnd = v
-		case string:
-			if err := book.SetDatePublishedEnd(v); err != nil {
-				return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
-			}
-		default:
-			return book, fmt.Errorf("book \"%s\": unrecognized published_end type given: got %v, want value of type 'time.Time' or 'string'", book.UniqueID, v)
-		}
+	if err := book.SetDatePublishedEndFromMap("publishedend", confMap); err != nil && !errors.Is(err, config.ErrDateFromMapKeyNotFound) {
+		return book, fmt.Errorf("book \"%s\": %w", book.UniqueID, err)
 	}
 
 	if err := book.SetDefaults(inputPath, parent); err != nil {
