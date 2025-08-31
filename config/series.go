@@ -1,6 +1,11 @@
 package config
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+var ErrSeriesMissingPossibleIdentifier = errors.New("book series must either have an indexID or a name")
 
 // SeriesInfo describes internal information of a series
 type SeriesInfo struct {
@@ -19,6 +24,24 @@ type BookSeriesItem struct {
 
 	IndexID     string
 	EntryNumber float64
+}
+
+func (b *BookSeriesItem) SetDefaults() {
+	if b.Name == "" {
+		b.Name = b.IndexID
+	}
+
+	if b.IndexID == "" {
+		b.IndexID = b.Name
+	}
+}
+
+func (b *BookSeriesItem) IsValid() error {
+	if b.IndexID == "" && b.Name == "" {
+		return ErrSeriesMissingPossibleIdentifier
+	}
+
+	return nil
 }
 
 // SeriesIndex describes a series: a set of related books.

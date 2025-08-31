@@ -55,16 +55,10 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 		for j := range book.Series {
 			series := &book.Series[j]
 
-			if series.IndexID == "" && series.Name == "" {
-				return index, fmt.Errorf("index: series %d must have either an indexID or a name", j)
-			}
+			series.SetDefaults()
 
-			if series.Name == "" {
-				series.Name = series.IndexID
-			}
-
-			if series.IndexID == "" {
-				series.IndexID = series.Name
+			if err := series.IsValid(); err != nil {
+				return index, err
 			}
 
 			exists := false
@@ -79,13 +73,9 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 			}
 
 			if !exists {
-				id := series.IndexID
-				if id == "" {
-					id = series.Name
-				}
-
 				var output config.SeriesIndex
-				output.SetDefaults(id, &index)
+
+				output.SetDefaults(series.IndexID, &index)
 				output.SeriesInfo = series.SeriesInfo
 				output.Content.Raw = []byte(series.About)
 				output.Books = append(output.Books, book)
@@ -105,17 +95,9 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 
 		for j := range book.Authors {
 			author := &book.Authors[j]
-
-			if author.UniqueID == "" && author.Name == "" {
-				return index, fmt.Errorf("index: author %d must have either an indexID or a name", j)
-			}
-
-			if author.Name == "" {
-				author.Name = author.UniqueID
-			}
-
-			if author.UniqueID == "" {
-				author.UniqueID = author.Name
+			author.EnsureDefaults()
+			if err := author.IsValid(); err != nil {
+				return index, err
 			}
 
 			exists := false
@@ -130,16 +112,10 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 			}
 
 			if !exists {
-				id := author.UniqueID
-				if id == "" {
-					id = author.Name
-				}
-
-				var output config.Profile
-				output.SetDefaults(id, &index)
-				output = *author
+				output := *author
 				output.Content.Raw = []byte(author.About)
 				output.Books = append(output.Books, book)
+				output.Parent = &index
 
 				index.Profiles = append(index.Profiles, output)
 			}
@@ -250,18 +226,9 @@ func parseNav(chapters *[]config.Chapter, chaptersDir string, book *config.Book)
 	for i := range *chapters {
 		c := &((*chapters)[i])
 
-		inputPath := filepath.Join(chaptersDir, c.FileName)
-		absInputPath, err := filepath.Abs(inputPath)
-		if err != nil {
+		if err := c.SetDefaults(filepath.Join(chaptersDir, c.FileName), book); err != nil {
 			return nil, err
 		}
-
-		c.InputPath = absInputPath
-		c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
-		if c.LanguageCode == "" {
-			c.LanguageCode = book.LanguageCode
-		}
-		c.Book = book
 
 		// if c.FileName == "" && c.Title == "" && c.UniqueID == "" {
 		// 	return nil, ErrChapterMissingPossibleIdentifier

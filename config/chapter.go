@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"path/filepath"
+	"strings"
 )
 
 var (
@@ -38,6 +40,23 @@ type Chapter struct {
 	Chapters  []Chapter
 	Next      *Chapter
 	Previous  *Chapter
+}
+
+func (c *Chapter) SetDefaults(inputPath string, book *Book) error {
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		return err
+	}
+	c.InputPath = absInputPath
+
+	c.UniqueID = strings.TrimSuffix(filepath.Base(c.InputPath), ".md")
+
+	if c.LanguageCode == "" {
+		c.LanguageCode = book.LanguageCode
+	}
+	c.Book = book
+
+	return nil
 }
 
 func (c *Chapter) ChaptersFlattened() []*Chapter {
