@@ -54,13 +54,6 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 
 		for j := range book.Series {
 			series := &book.Series[j]
-
-			series.SetDefaults()
-
-			if err := series.IsValid(); err != nil {
-				return index, err
-			}
-
 			exists := false
 			for k := range index.Series {
 				if series.IndexID == index.Series[k].UniqueID {
@@ -95,10 +88,6 @@ func DecodeIndex(inputPath string) (config.Index, error) {
 
 		for j := range book.Authors {
 			author := &book.Authors[j]
-			author.EnsureDefaults()
-			if err := author.IsValid(); err != nil {
-				return index, err
-			}
 
 			exists := false
 			for k := range index.Profiles {
@@ -177,6 +166,40 @@ func DecodeBook(inputPath string, parent *config.Index) (config.Book, error) {
 
 	if err := book.SetDefaults(inputPath, parent); err != nil {
 		return book, fmt.Errorf("book \"%s\": failed on initialization: %w", filepath.Base(inputPath), err)
+	}
+
+	// --- Series ---
+	for i := range book.Series {
+		series := &book.Series[i]
+		series.SetDefaults()
+		if err := series.IsValid(); err != nil {
+			return book, err
+		}
+	}
+
+	// --- Profiles ---
+	for i := range book.Authors {
+		profile := &book.Authors[i]
+		profile.EnsureDefaults()
+		if err := profile.IsValid(); err != nil {
+			return book, err
+		}
+	}
+
+	for i := range book.Contributors {
+		profile := &book.Contributors[i]
+		profile.EnsureDefaults()
+		if err := profile.IsValid(); err != nil {
+			return book, err
+		}
+	}
+
+	for i := range book.Publishers {
+		profile := &book.Publishers[i]
+		profile.EnsureDefaults()
+		if err := profile.IsValid(); err != nil {
+			return book, err
+		}
 	}
 
 	// --- Parse chapters ---
