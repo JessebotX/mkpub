@@ -28,7 +28,7 @@ type Context struct {
 type BuildCommand struct {
 	InputDirectory  string `short:"i" help:"Path to directory containing source files." type:"path" default:"./"`
 	OutputDirectory string `short:"o" help:"Path to directory containing compiled output files/formats for distribution." type:"path"`
-	Minify          bool   `help:"Str output of supported file formats."`
+	Minify          bool   `help:"Strip unnecessary bytes in output of supported file formats."`
 }
 
 func (b *BuildCommand) Run(context *Context) error {
@@ -101,7 +101,30 @@ func (v *VersionCommand) Run() error {
 	return nil
 }
 
+type NewCommand struct {
+	Index NewIndexCommand `cmd:""`
+}
+
+type NewIndexCommand struct {
+	InputDirectory string `short:"i" help:"Path to directory containing source files." type:"path" default:"./"`
+}
+
+func (i *NewIndexCommand) Run(ctx *Context) error {
+	if err := os.MkdirAll(filepath.Join(i.InputDirectory, "books"), 0755); err != nil {
+		return err
+	}
+
+	f, err := os.Create(filepath.Join(i.InputDirectory, mkpub.IndexConfigName))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return nil
+}
+
 type CLI struct {
+	New                    NewCommand     `cmd:"init" help:"Initialize directory for sources"`
 	Build                  BuildCommand   `cmd:"" help:"Convert source files into a static website and other distributable output formats"`
 	Version                VersionCommand `cmd:"" help:"Print application version to the terminal (i.e. standard output) and exit successfully (code 0)"`
 	NoNonEssentialMessages bool           `short:"q" help:"Disable printing non-error debug messages (e.g. build progress messages) to the terminal (i.e. standard output)"`
