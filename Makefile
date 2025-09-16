@@ -1,36 +1,31 @@
 GOEXE = go
 GOFMTEXE = gofmt
 GOFMTFLAGS = -s -w -l
-GOFMTINPUT = *.go cmd/mkpub/*.go config/*.go
+GOFMTINPUT = $(SRC)
 GOLINTEXE = staticcheck
 GOLINTFLAGS =
 GOLINTINPUT = ./...
 
-BINSRCDIR = ./cmd
-BINEXE = mkpub
+SRC = *.go cmd/pub/*.go
+BIN = pub
+TESTDATAPATH = testdata/book1
 
 all: build
 
 build:
 	$(GOEXE) mod download
-	$(GOEXE) build $(BINSRCDIR)/$(BINEXE)
+	$(GOEXE) build ./cmd/$(BIN)
 
-fmt: format
-format:
+fmt:
 	$(GOFMTEXE) $(GOFMTFLAGS) $(GOFMTINPUT)
 
-vet: lint
-check: lint
 lint:
 	$(GOLINTEXE) $(GOLINTFLAGS) $(GOLINTINPUT)
 
 clean: clean-bin clean-test
 
 clean-bin:
-	rm -f $(BINEXE) $(BINEXE).exe
+	rm -f $(BIN) $(BIN).exe
 
 clean-test:
-	rm -rf testdata/build
-
-install:
-	$(GOEXE) install ./cmd/mkpub
+	rm -rf $(TESTDATAPATH)/_output
