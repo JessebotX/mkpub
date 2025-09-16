@@ -1,12 +1,13 @@
 # pub
 
-- Easy to use
-- Static site generator that also supports creating RSS feeds, EPUBs, etc. from your Markdown files (WIP)
-- Highly customizable and extensible: customize the underlying layout using `go`'s advanced templating engine
-- Great defaults; zero/minimal configuration required
-- No lock-in to any service or ecosystem
-- Local and private
-- Backward and forward-compatible (at and after version 1.0.0)
+![https://pkg.go.dev/badge/github.com/JessebotX/pub](https://pkg.go.dev/github.com/JessebotX/pub)
+
+- _Easy to use **static site generator**_ that *also supports creating RSS feeds, EPUBs*, etc. from your Markdown files (WIP)
+- Highly **customizable and extensible**: modify the underlying layout to your heart's content using `go`'s advanced text templating engine
+- **Zero/minimal configuration necessary**: `pub` comes with great defaults that emphasize user accessibility and system compatibility
+- **Local and private**: use the program and browse the documentation (WIP) locally without an internet connection
+- **No lock-in** to any service or ecosystem
+- **Backward and forward-compatible** (at and after version 1.0.0)
 
 ## Description
 
