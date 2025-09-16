@@ -1,6 +1,6 @@
 # pub
 
-![https://pkg.go.dev/badge/github.com/JessebotX/pub](https://pkg.go.dev/github.com/JessebotX/pub)
+[![](https://pkg.go.dev/badge/github.com/JessebotX/pub)](https://pkg.go.dev/github.com/JessebotX/pub)
 
 - _Easy to use **static site generator**_ that *also supports creating RSS feeds, EPUBs*, etc. from your Markdown files (WIP)
 - Highly **customizable and extensible**: modify the underlying layout to your heart's content using `go`'s advanced text templating engine
