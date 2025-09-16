@@ -1,4 +1,4 @@
-package mkpub
+package pub
 
 import (
 	"bytes"
@@ -10,12 +10,15 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/JessebotX/mkpub/config"
-
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	mdhtml "github.com/yuin/goldmark/renderer/html"
+)
+
+const (
+	defaultFilePerms = 0666
+	defaultDirPerms  = 0755
 )
 
 var (
@@ -35,199 +38,100 @@ var (
 	)
 )
 
-func WriteIndexToStaticWebsite(index *config.Index, outputDir string) error {
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return err
+func WriteBookToStaticSite(book *Book, inputDir, outputDir, layoutsDir string) error {
+	if err := os.MkdirAll(outputDir, defaultDirPerms); err != nil {
+		return fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err)
 	}
 
-	// --- handle static files ---
-	if err := copyDirectory(index.LayoutsDirectory, outputDir, []string{
-		"index.html",
-		"_book.html",
-		"_chapter.html",
-		"_profile.html",
-		"_series.html",
-		"_tag.html",
+	// --- Parse content ---
+	parsedHTML, err := convertMarkdownToHTML(book.Content.Raw)
+	if err != nil {
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
+	}
+	book.Content.AddFormat("html", parsedHTML)
+
+	// --- Templates ---
+	tplName := "index.html"
+	tpl, err := template.New("index.html").Funcs(TplFuncs).ParseFiles(filepath.Join(layoutsDir, tplName))
+	if err != nil {
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
+	}
+
+	chapterTplName := filepath.Join("_chapter", "index.html")
+	chapterTpl, err := template.New("index.html").Funcs(TplFuncs).ParseFiles(filepath.Join(layoutsDir, chapterTplName))
+	if err != nil {
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
+	}
+
+	// --- Copy static layout files ---
+	if err := copyDirectory(layoutsDir, outputDir, []string{
+		tplName,
+		chapterTplName,
 	}); err != nil {
-		return fmt.Errorf("write: failed to copy files to output: %w", err)
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
 	}
 
-	// --- parse content ---
-	for i := range index.Books {
-		book := &index.Books[i]
-
-		parsedHTML, err := convertMarkdownToHTML(book.Content.Raw)
-		if err != nil {
-			return fmt.Errorf("write: failed to convert book \"%s\" about field to html: %w", book.UniqueID, err)
-		}
-		book.Content.AddFormat("html", parsedHTML)
-
-		for j := range book.ChaptersFlattened() {
-			chapter := book.ChaptersFlattened()[j]
-
-			parsedHTML, err := convertMarkdownToHTML(chapter.Content.Raw)
-			if err != nil {
-				return fmt.Errorf("write: failed to convert chapter \"%s\" content to html: %w", chapter.UniqueID, err)
-			}
-			chapter.Content.AddFormat("html", parsedHTML)
-		}
-	}
-
-	for i := range index.Series {
-		series := &index.Series[i]
-		parsedHTML, err := convertMarkdownToHTML(series.Content.Raw)
-		if err != nil {
-			return fmt.Errorf("write: failed to convert series \"%s\" (%s) about info to html: %w", series.Name, series.UniqueID, err)
-		}
-		series.Content.AddFormat("html", parsedHTML)
-	}
-
-	for i := range index.Profiles {
-		profile := &index.Profiles[i]
-		parsedHTML, err := convertMarkdownToHTML(profile.Content.Raw)
-		if err != nil {
-			return fmt.Errorf("write: failed to convert profile \"%s\" (%s) about info to html: %w", profile.Name, profile.UniqueID, err)
-		}
-		profile.Content.AddFormat("html", parsedHTML)
-	}
-
-	// --- favicon ---
-	faviconName := index.FaviconImageName
-	if faviconName != "" {
-		if err := copyFile(filepath.Join(index.InputPath, faviconName), filepath.Join(outputDir, faviconName)); err != nil {
-			return err
-		}
-	}
-
-	// --- book index ---
-	wrIndex, err := os.Create(filepath.Join(outputDir, "index.html"))
+	// --- Book index.html ---
+	f, err := os.Create(filepath.Join(outputDir, "index.html"))
 	if err != nil {
-		return fmt.Errorf("write: %w", err)
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
 	}
-	defer wrIndex.Close()
+	defer f.Close()
 
-	indexTmplPath := filepath.Join(index.LayoutsDirectory, "index.html")
-	indexTmpl, err := template.New("index.html").Funcs(TemplateFuncs).ParseFiles(indexTmplPath)
-	if err != nil {
-		err = fmt.Errorf("write: failed to read index template file %s: %w", indexTmplPath, err)
-		writeErrHTML(err, wrIndex)
-		return err
-	}
-
-	if err := indexTmpl.ExecuteTemplate(wrIndex, "index.html", index); err != nil {
-		err = fmt.Errorf("write: %w", err)
-		writeErrHTML(err, wrIndex)
-		return err
-	}
-
-	for i := range index.Books {
-		book := &index.Books[i]
-		bookOutputDir := filepath.Join(outputDir, "books", book.UniqueID)
-
-		if err := writeBookToStaticWebsite(book, bookOutputDir); err != nil {
-			writeErrHTML(err, wrIndex)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func writeBookToStaticWebsite(book *config.Book, outputDir string) error {
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return err
-	}
-
-	wrBook, err := os.Create(filepath.Join(outputDir, "index.html"))
-	if err != nil {
-		return fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-	}
-	defer wrBook.Close()
-
-	// --- Book main page ---
-	index := book.Parent
-	bookTmplPath := filepath.Join(index.LayoutsDirectory, "_book.html")
-	bookTmpl, err := template.New("_book.html").Funcs(TemplateFuncs).ParseFiles(bookTmplPath)
-	if err != nil {
-		err = fmt.Errorf("book \"%s\" (%s): failed to read template file %s: %w", book.Title, book.UniqueID, bookTmplPath, err)
-		writeErrHTML(err, wrBook)
-		return err
-	}
-
-	if err := bookTmpl.ExecuteTemplate(wrBook, "_book.html", book); err != nil {
-		err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-		writeErrHTML(err, wrBook)
-		return err
-	}
-
-	// --- Cover image ---
-	imagesOutputDir := filepath.Join(outputDir, "images")
-	if err := os.MkdirAll(imagesOutputDir, 0755); err != nil {
-		err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-		writeErrHTML(err, wrBook)
-		return err
-	}
-
-	coverName := book.CoverImage.Name
-	if coverName != "" {
-		if err := copyFile(filepath.Join(book.InputDirectory, "images", coverName), filepath.Join(imagesOutputDir, coverName)); err != nil {
-			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-			writeErrHTML(err, wrBook)
-			return err
-		}
+	if err := tpl.Execute(f, book); err != nil {
+		return writeErrHTMLAndReturn(fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err), outputDir)
 	}
 
 	// --- Chapters ---
+	chaptersDir := filepath.Join(outputDir, "chapters")
+	if err := os.MkdirAll(chaptersDir, defaultDirPerms); err != nil {
+		return fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err)
+	}
 
-	flattenedChapters := book.ChaptersFlattened()
-	for i := range flattenedChapters {
-		chapter := flattenedChapters[i]
-		chapterOutputDir := filepath.Join(outputDir, "chapters")
-		if err := os.MkdirAll(chapterOutputDir, 0755); err != nil {
-			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-			writeErrHTML(err, wrBook)
-			return err
-		}
-
-		if err := writeChapterToStaticWebsite(chapter, filepath.Join(chapterOutputDir, chapter.UniqueID+".html")); err != nil {
-			err = fmt.Errorf("book \"%s\" (%s): %w", book.Title, book.UniqueID, err)
-			writeErrHTML(err, wrBook)
-			return err
+	for _, chapter := range book.ChaptersAndSubchapters() {
+		if err := writeChapterToStaticSite(chapter, chapter.InputPath, filepath.Join(chaptersDir, chapter.UniqueID+".html"), chapterTpl); err != nil {
+			return writeErrHTMLAndReturn(err, outputDir)
 		}
 	}
 
 	return nil
 }
 
-func writeChapterToStaticWebsite(chapter *config.Chapter, outputPath string) error {
+func writeChapterToStaticSite(chapter *Chapter, inputPath, outputPath string, tpl *template.Template) error {
+	parsedHTML, err := convertMarkdownToHTML(chapter.Content.Raw)
+	if err != nil {
+		return fmt.Errorf("[WRITE CHAPTER] \"%s\": %w", inputPath, err)
+	}
+	chapter.Content.AddFormat("html", parsedHTML)
+
 	f, err := os.Create(outputPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("[WRITE CHAPTER] \"%s\": %w", inputPath, err)
 	}
+	defer f.Close()
 
-	book := chapter.Book
-	layoutsDir := book.Parent.LayoutsDirectory
-	chapterTmplPath := filepath.Join(layoutsDir, "_chapter.html")
-	chapterTmpl, err := template.New("_chapter.html").Funcs(TemplateFuncs).ParseFiles(chapterTmplPath)
-	if err != nil {
-		err = fmt.Errorf("chapter \"%s\": failed to read template file %s: %w", chapter.UniqueID, chapterTmplPath, err)
-		writeErrHTML(err, f)
-		return err
-	}
-
-	if err := chapterTmpl.ExecuteTemplate(f, "_chapter.html", chapter); err != nil {
-		err = fmt.Errorf("chapter \"%s\": %w", chapter.UniqueID, err)
-		writeErrHTML(err, f)
-		return err
+	if err := tpl.Execute(f, chapter); err != nil {
+		return fmt.Errorf("[WRITE CHAPTER] \"%s\": %w", inputPath, err)
 	}
 
 	return nil
 }
 
+func convertMarkdownToHTML(rawText []byte) (template.HTML, error) {
+	var buffer bytes.Buffer
+	if err := md.Convert(rawText, &buffer); err != nil {
+		return template.HTML(""), err
+	}
+
+	return template.HTML(buffer.String()), nil
+}
+
+// Copy files, directories and subdirectories, and supports excluding certain files from copying
 func copyDirectory(sourcePath, destinationPath string, excludePaths []string) error {
 	return copyDirectoryHelper(sourcePath, destinationPath, sourcePath, excludePaths)
 }
 
+// Recursively copies directories and subdirectories. Should use the copyDirectory() function wrapper instead.
 func copyDirectoryHelper(curr, dest, start string, excludePaths []string) error {
 	items, err := os.ReadDir(curr)
 	if err != nil {
@@ -247,14 +151,14 @@ func copyDirectoryHelper(curr, dest, start string, excludePaths []string) error 
 
 		// recursively copy subdirectories
 		if item.IsDir() {
-			if err := os.MkdirAll(newFilePath, 0755); err != nil {
-				return err
-			}
-
 			if err := copyDirectoryHelper(target, dest, start, excludePaths); err != nil {
 				return err
 			}
 		} else {
+			if err := os.MkdirAll(newFilePath, defaultDirPerms); err != nil {
+				return err
+			}
+
 			if err := copyFile(target, newFilePath); err != nil {
 				return err
 			}
@@ -284,32 +188,39 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
-func writeErrHTML(err error, writers ...io.Writer) {
-	for i := range writers {
-		_, _ = writers[i].Write([]byte(`<div style="position:fixed;
-font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
-top:0;
-left:0;
-height:100%;
-font-weight:bold;
-font-size:1.75rem;
-box-sizing:border-box;
-padding:2rem;
-text-align:center;
-width:100%;
-margin:0;
-padding:0;
-background:#333333;
-color:white;
-z-index:999"><span style="background:red;color:white;">ERROR:</span> ` + err.Error() + `</div>`))
-	}
-}
+// Use like so: (should only be used by functions that are exported so it doesn't write call this function multiple times)
+//
+//	return fmt.Errorf("<msg>: %w", err))
+func writeErrHTMLAndReturn(err error, outputDir string) error {
+	_ = filepath.WalkDir(outputDir, func(path string, d os.DirEntry, walkDirErr error) error {
+		if walkDirErr != nil {
+			return walkDirErr
+		}
 
-func convertMarkdownToHTML(data []byte) (template.HTML, error) {
-	var buffer bytes.Buffer
-	if err := md.Convert(data, &buffer); err != nil {
-		return template.HTML(""), err
-	}
+		if !d.IsDir() && filepath.Ext(path) == ".html" {
+			_ = os.WriteFile(path, []byte(`
+<div style="
+	position:    fixed;
+	font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+	top:         0;
+	left:        0;
+	height:      100%;
+	font-weight: bold;
+	font-size:   1.75rem;
+	box-sizing:  border-box;
+	padding:     2rem;
+	text-align:  center;
+	width:       100%;
+	margin:      0;
+	padding:     0;
+	background:  #333333;
+	color:       white;
+	z-index:     999">
+	<span style="background:red;color:white;">ERROR:</span>`+err.Error()+`</div>`), defaultFilePerms)
+		}
 
-	return template.HTML(buffer.String()), nil
+		return nil
+	})
+
+	return err
 }

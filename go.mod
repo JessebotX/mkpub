@@ -1,6 +1,6 @@
-module github.com/JessebotX/mkpub
+module github.com/JessebotX/pub
 
-go 1.24.1
+go 1.25.0
 
 require (
 	github.com/alecthomas/kong v1.12.1

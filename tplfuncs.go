@@ -1,16 +1,16 @@
-package mkpub
+package pub
 
 import (
 	"errors"
 	"html/template"
-	// "strconv"
 )
 
 var (
 	ErrNotFloat = errors.New("arguments must be rational numbers")
+	ErrNotInt   = errors.New("arguments must allow conversion into an integer (float/decimal numbers are truncated i.e. 3.9 => 3)")
 )
 
-var TemplateFuncs = template.FuncMap{
+var TplFuncs = template.FuncMap{
 	"add":   add,
 	"sub":   sub,
 	"mul":   mul,
@@ -18,6 +18,21 @@ var TemplateFuncs = template.FuncMap{
 	"inc":   inc,
 	"dec":   dec,
 	"float": convFloat,
+	"int":   convInt,
+}
+
+func convInt(num any) (int, error) {
+	i, ok := num.(int)
+	if ok {
+		return i, nil
+	}
+
+	f, ok := num.(float64)
+	if ok {
+		return int(f), nil
+	}
+
+	return -1, ErrNotInt
 }
 
 func convFloat(num any) (float64, error) {
