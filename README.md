@@ -31,4 +31,14 @@ go install github.com/JessebotX/pub/cmd/pub@latest
 
 ## Usage
 
-TODO
+For help using the CLI utility, run program with `-h` or `--help` flag like so:
+
+```shell
+pub --help
+```
+
+OR access the man page on a unix-like system (WIP):
+
+```shell
+man pub
+```
