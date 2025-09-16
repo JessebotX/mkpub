@@ -1,0 +1,11 @@
+- content_file_name: chapter-1.md
+  chapters:
+    - content_file_name: chapter-1-1.md
+    - content_file_name: chapter-1-2.md
+      chapters:
+        - title: Chapter 1.2.1
+          content_file_name: chapter-1-21.md
+        - title: Chapter 1.2.2
+          content_file_name: chapter-1-22.md
+    - title: Coming Soon - Chapter 1.3
+- content_file_name: chapter-2.md

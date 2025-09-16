@@ -1,3 +1,0 @@
-# chapter 1 heading
-
-Aenean eget enim sem. Nulla facilisi. Aenean in sapien id metus vehicula pulvinar ullamcorper ac massa. Mauris iaculis luctus magna, in euismod orci. Fusce volutpat ligula id eros ultricies, et vestibulum nulla pellentesque. Phasellus volutpat malesuada nunc, et convallis elit ullamcorper vitae. Pellentesque eget nisl at sapien luctus hendrerit vitae eu dolor. Duis nunc diam, lacinia eu convallis ac, facilisis sit amet justo. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Praesent at gravida augue. Etiam at ornare neque. Fusce et dictum massa. Integer imperdiet rhoncus neque, eget scelerisque nisl dapibus eget.

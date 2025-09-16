@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="description" property="og:description" content="{{ .Description }}">
+
+<meta name="title" property="og:title" content="{{ .Title }}">
+<title>{{ .Title }}</title>
+
+<h1>{{ .Title }}</h1>
+
+<div>
+	{{ .Content.Format "html" }}
+</div>
+

@@ -1,3 +1,0 @@
-# Chapter 1.1.1
-
-Content here...

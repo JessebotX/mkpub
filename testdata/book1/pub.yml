@@ -1,0 +1,30 @@
+unique_id: lipsum
+titles:
+  - Lipsum
+  - Experimentum
+  - 実験
+subtitle: The Lorem Ipsum Book
+description: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+tagline: Lorem ipsum dolor sit amet.
+tags:
+  - Fiction
+  - Testing
+  - Technology
+status: Hiatus
+edition: 2nd edition
+url: "https://example.com"
+language_code: en
+date_published_start: "2025-09-08"
+date_published_end: "2025-09-09"
+copyright:
+  notice: "© 2025. Licensed under CC0-1.0."
+  licenses:
+    - file_name: "LICENSE.txt"
+ids:
+  uuid: "c86aa0bf-7fc1-4001-bd35-60c75c1faa4f"
+  isbn-10: "817525766-0"
+extra:
+  field1: "Hello,"
+  field2: "World!"
+  numbers: [ 1, 2, 3, 4, 5 ]
+

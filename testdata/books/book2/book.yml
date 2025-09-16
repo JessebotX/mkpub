@@ -1,9 +1,0 @@
-title: Book 1
-languageCode: en
-subtitle: The Book
-titleSort: "Book 1; or, The Book"
-authors:
-  - uniqueID: "John Doe"
-authorsSort: "Doe, John & Doe, Jane"
-series:
-  - name: The Book
