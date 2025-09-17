@@ -9,11 +9,9 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/mkpub",
+            "program": "${workspaceFolder}/cmd/pub",
             "args": [
-                "build",
-                "-i",
-                "${workspaceFolder}/testdata"
+                "${workspaceFolder}/testdata/book1"
             ]
         }
     ]
