@@ -1,4 +1,4 @@
-package pub
+package html
 
 import (
 	"bytes"
@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/JessebotX/pub"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -38,7 +40,7 @@ var (
 	)
 )
 
-func WriteBookToStaticSite(book *Book, inputDir, outputDir, layoutsDir string) error {
+func RenderBook(book *pub.Book, inputDir, outputDir, layoutsDir string) error {
 	if err := os.MkdirAll(outputDir, defaultDirPerms); err != nil {
 		return fmt.Errorf("[WRITE BOOK] \"%s\": %w", inputDir, err)
 	}
@@ -97,7 +99,7 @@ func WriteBookToStaticSite(book *Book, inputDir, outputDir, layoutsDir string) e
 	return nil
 }
 
-func writeChapterToStaticSite(chapter *Chapter, inputPath, outputPath string, tpl *template.Template) error {
+func writeChapterToStaticSite(chapter *pub.Chapter, inputPath, outputPath string, tpl *template.Template) error {
 	parsedHTML, err := convertMarkdownToHTML(chapter.Content.Raw)
 	if err != nil {
 		return fmt.Errorf("[WRITE CHAPTER] \"%s\": %w", inputPath, err)

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/JessebotX/pub"
+	pubhtml "github.com/JessebotX/pub/renderer/html"
 )
 
 type BuildCommand struct {
@@ -64,7 +65,7 @@ func (b BuildCommand) Run(ctx *Context) error {
 		fmt.Println("GENERATING STATIC WEBSITE...")
 	}
 
-	if err := pub.WriteBookToStaticSite(&book, inputDir, outputDir, layoutsDir); err != nil {
+	if err := pubhtml.RenderBook(&book, inputDir, outputDir, layoutsDir); err != nil {
 		return err
 	}
 
