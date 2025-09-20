@@ -18,6 +18,6 @@ func (VersionCommand) Run() error {
 
 Homepage :: <%s>
 License  :: %s (<%s>)
-\n`, Version, Homepage, LicenseIdentifier, LicenseLink)
+`, Version, Homepage, LicenseIdentifier, LicenseLink)
 	return nil
 }
