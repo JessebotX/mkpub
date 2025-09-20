@@ -18,7 +18,7 @@ type Profile struct {
 }
 
 func (p *Profile) EnsureValid() error {
-	if len(p.NamesAlternate) == 0 {
+	if p.Name == "" {
 		return ErrProfileMissingName
 	}
 
