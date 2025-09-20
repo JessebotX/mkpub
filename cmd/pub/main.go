@@ -7,12 +7,6 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-const (
-	Version        = "0.14.0"
-	LayoutsDirName = "_layouts"
-	OutputDirName  = "_output"
-)
-
 type Context struct {
 	Plain                  bool
 	NoNonEssentialMessages bool

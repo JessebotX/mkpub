@@ -8,6 +8,11 @@ import (
 	pubhtml "github.com/JessebotX/pub/renderer/html"
 )
 
+const (
+	LayoutsDirName = "_layouts"
+	OutputDirName  = "_output"
+)
+
 type BuildCommand struct {
 	InputDirectory   string  `name:"input-directory" type:"existingdir" default:"./" arg:"" help:"Directory containing structured source files that will be parsed into distributable output formats"`
 	OutputDirectory  *string `name:"output-directory" short:"o" help:"Directory for distributable output formats. By default, directory is relative to the specified input directory"`
