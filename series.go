@@ -13,8 +13,7 @@ var (
 type Series struct {
 	Title           string      `json:"title"`
 	TitlesAlternate []string    `json:"titles_alternate"`
-	NumberPrimary   uint64      `json:"number_primary"`
-	NumberSecondary uint64      `json:"number_secondary"`
+	Number          float64     `json:"number"`
 	Description     string      `json:"description"`
 	Content         Content     `json:"content"`
 	External        []Reference `json:"external"`
@@ -32,13 +31,4 @@ func (s Series) EnsureValid() error {
 	}
 
 	return nil
-}
-
-// Compare compares to Series entries based on Series's NumberPrimary and NumberSecondary fields. It returns 0 when they are the same, > 0 when s is higher than other, and < 0 when s is less than other.
-func (s Series) Compare(other Series) int {
-	if s.NumberPrimary != other.NumberPrimary {
-		return int(s.NumberPrimary) - int(other.NumberPrimary)
-	}
-
-	return int(s.NumberSecondary) - int(other.NumberSecondary)
 }
